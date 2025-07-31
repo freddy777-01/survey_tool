@@ -3,6 +3,7 @@ import Layout from "./Layout";
 import ActionBar from "@/Components/ActionBar";
 import Question from "@/Components/Question";
 import { FormContext, FormProvider } from "@/Utilities/FormProvider";
+import { TbZoomQuestion } from "react-icons/tb";
 
 function welcome() {
     return (
@@ -23,6 +24,9 @@ function Form() {
                 <div className="" id="survey-form">
                     <div className=" w-[40rem] p-2 rounded-lg shadow-lg bg-gray-100">
                         <p className="text-left text-gray-500 p-2">
+                            <span className="text-black font-semibold">
+                                Title :
+                            </span>{" "}
                             {formTitle ? formTitle : "Form Title"}
                         </p>
                         <div className="p-2">
@@ -36,17 +40,26 @@ function Form() {
                         </div>
                     </div>
                     <div className="mt-5">
-                        <p className="text-left text-gray-500 p-1">Questions</p>
+                        {/* <p className="text-left text-gray-500 p-1">Questions</p> */}
                         {formContext.formQuestions.length > 0 ? (
                             <ul id="questions" className="">
-                                {formContext.formQuestions.map(
-                                    (question, index) => (
-                                        <Question questionId={question.id} />
-                                    )
-                                )}
+                                {formContext.formQuestions.map((q, index) => (
+                                    <Question
+                                        questionId={q.id}
+                                        key={q.id}
+                                        content={q}
+                                    />
+                                ))}
                             </ul>
                         ) : (
-                            <div className="">Create Questions</div>
+                            <div className="flex gap-x-3 items-center justify-center p-5 text-gray-400 text-shadow-2xs  rounded-md">
+                                <span className=" mx-2 ">
+                                    {" "}
+                                    add Questions.....
+                                </span>
+
+                                <TbZoomQuestion />
+                            </div>
                         )}
                     </div>
                 </div>

@@ -1,9 +1,12 @@
 import React from "react";
 import { RxCross2 } from "react-icons/rx";
 import { CgAddR } from "react-icons/cg";
+import moment from "moment";
 
-export default function CheckBox() {
-    const [choices, setChoices] = React.useState([{ value: "option1" }]);
+export default function CheckBox({ questionId }) {
+    const [choices, setChoices] = React.useState([
+        { id: moment().valueOf(), name: "check_box", value: "option1" },
+    ]);
     let updateChoices = () => {};
     let addChoice = (choice) => {
         setChoices([...choices, choice]);
@@ -14,7 +17,7 @@ export default function CheckBox() {
                 {choices.map((choice, index) => (
                     <li
                         className="flex flex-row justify-between items-center p-2"
-                        key={index}
+                        key={choice.id}
                     >
                         <div className="flex">
                             <input
@@ -22,6 +25,7 @@ export default function CheckBox() {
                                 value={choice.value}
                                 name={"check_box"}
                                 className="cursor-pointer h-5 w-5 border border-slate-300 transition-all checked:border-blue-300 focus:ring-1 rounded-md p-1.5"
+                                disabled={true}
                             />
                             <input
                                 type="text"
@@ -40,7 +44,7 @@ export default function CheckBox() {
                             className="ml-2 p-1 rounded-md text-black hover:bg-gray-200 transition-colors cursor-pointer"
                             onClick={() => {
                                 const newChoices = choices.filter(
-                                    (_, i) => i !== index
+                                    (_c, i) => _c.id !== choice.id
                                 );
                                 setChoices(newChoices);
                                 updateChoices(newChoices);
@@ -55,7 +59,11 @@ export default function CheckBox() {
                 <button
                     className="flex flex-row justify-between items-center p-1 bg-blue-300 rounded-md shadow-md hover:bg-blue-400 transition-colors cursor-pointer"
                     onClick={() =>
-                        addChoice({ value: `option${choices.length + 1}` })
+                        addChoice({
+                            id: moment().valueOf(),
+                            name: "check_box",
+                            value: `option${choices.length + 1}`,
+                        })
                     }
                 >
                     <CgAddR className="mx-auto" title="" />

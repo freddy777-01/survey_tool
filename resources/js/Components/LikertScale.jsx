@@ -2,8 +2,12 @@ import React from "react";
 
 import { RxCross2 } from "react-icons/rx";
 import { CgAddR } from "react-icons/cg";
+import { FormContext } from "@/utilities/FormProvider";
+import moment from "moment";
 
-export default function LikertScale({ questionId }) {
+export default function LikertScale({ questionId, choice }) {
+    const formContext = React.useContext(FormContext);
+
     const [choices, setChoices] = React.useState([{ value: "option1" }]);
     const [likertScale, setLikertScale] = React.useState([
         { name: "strongly_agree", value: "Strongly Agree" },
@@ -18,6 +22,27 @@ export default function LikertScale({ questionId }) {
     let addChoice = (choice) => {
         setChoices([...choices, choice]);
     };
+    React.useEffect(() => {
+        let _likertscale = [
+            {
+                id: moment().valueOf(),
+                name: "strongly_agree",
+                value: "Strongly Agree",
+            },
+            { id: moment().valueOf(), name: "agree", value: "Agree" },
+            { id: moment().valueOf(), name: "not_sure", value: "Not sure" },
+            { id: moment().valueOf(), name: "disagree", value: "Disagree" },
+            {
+                id: moment().valueOf(),
+                name: "strongly_disagree",
+                value: "Strongly Disagree",
+            },
+        ];
+        setLikertScale(_likertscale);
+    }, []);
+    React.useEffect(() => {
+        formContext.changeAnswerStructure(questionId, choice, likertScale);
+    }, [choice]);
     return (
         <div>
             <div className="flex flex-row gap-x-5 items-center p-2 text-sm">

@@ -1,16 +1,31 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { RxCross2 } from "react-icons/rx";
 import { CgAddR } from "react-icons/cg";
 import moment from "moment";
+import { FormContext } from "@/utilities/FormProvider";
 
-export default function CheckBox({ questionId }) {
-    const [choices, setChoices] = React.useState([
-        { id: moment().valueOf(), name: "check_box", value: "option1" },
-    ]);
-    let updateChoices = () => {};
-    let addChoice = (choice) => {
-        setChoices([...choices, choice]);
-    };
+export default function CheckBox({ questionId, choice }) {
+    const formContext = React.useContext(FormContext);
+
+    const [choices, setChoices] = React.useState([]);
+    useEffect(() => {
+        const question = formContext
+            .getFormQuestions()
+            .find((q) => q.id === questionId);
+
+        if (question && question.answer && question.answer.structure) {
+            setChoices(question.answer.structure);
+            /* console.log("Choices set to:", question.answer.structure);
+            console.log(choices); */
+        } else {
+            console.warn("Question or structure not found yet");
+        }
+    }, [formContext.getFormQuestions(), questionId]);
+
+    useEffect(() => {
+        formContext.changeAnswerStructure(questionId, choice, choices);
+    }, [choice]);
+
     return (
         <div>
             <ul className="">
@@ -32,23 +47,23 @@ export default function CheckBox({ questionId }) {
                                 className="focus:outline-none mx-2 border-b-1"
                                 placeholder="label..."
                                 value={choice.value}
-                                onChange={(e) => {
-                                    const newChoices = [...choices];
-                                    newChoices[index].value = e.target.value;
-                                    setChoices(newChoices);
-                                    updateChoices(newChoices);
-                                }}
+                                onChange={(e) =>
+                                    formContext.changeChoiceLabel(
+                                        questionId,
+                                        choice.id,
+                                        e.target.value
+                                    )
+                                }
                             />
                         </div>
                         <button
                             className="ml-2 p-1 rounded-md text-black hover:bg-gray-200 transition-colors cursor-pointer"
-                            onClick={() => {
-                                const newChoices = choices.filter(
-                                    (_c, i) => _c.id !== choice.id
-                                );
-                                setChoices(newChoices);
-                                updateChoices(newChoices);
-                            }}
+                            onClick={() =>
+                                formContext.removeQuestionChoice(
+                                    questionId,
+                                    choice.id
+                                )
+                            }
                         >
                             <RxCross2 />
                         </button>
@@ -59,11 +74,7 @@ export default function CheckBox({ questionId }) {
                 <button
                     className="flex flex-row justify-between items-center p-1 bg-blue-300 rounded-md shadow-md hover:bg-blue-400 transition-colors cursor-pointer"
                     onClick={() =>
-                        addChoice({
-                            id: moment().valueOf(),
-                            name: "check_box",
-                            value: `option${choices.length + 1}`,
-                        })
+                        formContext.addQuestionChoice(questionId, "check_box")
                     }
                 >
                     <CgAddR className="mx-auto" title="" />

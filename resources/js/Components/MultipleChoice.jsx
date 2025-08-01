@@ -4,17 +4,15 @@ import { CgAddR } from "react-icons/cg";
 import moment from "moment";
 import { FormContext } from "@/utilities/FormProvider";
 
-//TODO => Fix choices mechanism, connect it to global state, fix add choice button and remove choice button. all have to be connected to global state
-
-export default function MultipleChoice({ questionId }) {
+export default function MultipleChoice({ questionId, choice }) {
     const formContext = React.useContext(FormContext);
 
     const [choices, setChoices] = React.useState([]);
 
     useEffect(() => {
-        const question = formContext.formQuestions.find(
-            (q) => q.id === questionId
-        );
+        const question = formContext
+            .getFormQuestions()
+            .find((q) => q.id === questionId);
 
         if (question && question.answer && question.answer.structure) {
             setChoices(question.answer.structure);
@@ -23,7 +21,11 @@ export default function MultipleChoice({ questionId }) {
         } else {
             console.warn("Question or structure not found yet");
         }
-    }, [formContext.formQuestions, questionId]);
+    }, [formContext.getFormQuestions(), questionId]);
+
+    useEffect(() => {
+        formContext.changeAnswerStructure(questionId, choice, choices);
+    }, [choice]);
 
     let updateChoices = () => {};
     let addChoice = (choice) => {

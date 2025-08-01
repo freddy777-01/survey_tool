@@ -1,4 +1,4 @@
-import React, { useContext, useEffect } from "react";
+import React, { useContext, useEffect, useId } from "react";
 import MultipleChoice from "./MultipleChoice";
 import CheckBox from "./CheckBox";
 import Written from "./Written";
@@ -9,21 +9,55 @@ import LikertScale from "./LikertScale";
 import { LuPencilLine } from "react-icons/lu";
 
 export default function Question({ questionId, content }) {
-    const [choice, setChoice] = React.useState("multiple_choice");
     const formContext = useContext(FormContext);
+    const [choice, setChoice] = React.useState("multiple_choice");
     const [addDescription, setAddDescription] = React.useState(false);
-
+    const [selectedSection, setSelectedSection] = React.useState("");
+    useEffect(() => {
+        let _selectedSection = formContext.getSections().find((section) => {
+            return section.questions.includes(questionId);
+        });
+        // console.log(_selectedSection);
+        setSelectedSection(_selectedSection ? _selectedSection : "");
+    }, [formContext.getSections()]);
     return (
         <li className="w-[40rem] p-2 rounded-lg shadow-lg bg-gray-100 my-5">
-            <div className="p-2 flex flex-row gap-x-1.5 justify-end mb-3">
-                {/* <button
-                    className=" bg-blue-300 hover:bg-blue-500 transition-colors text-white font-semibold p-1 cursor-pointer rounded-md px-1 flex gap-x-1.5 items-center justify-center"
-                    onClick={() => setAddDescription(!addDescription)}
-                >
-                    <LuPencilLine />
-                </button> */}
+            <div
+                className={`p-2 flex flex-row gap-x-1.5 ${
+                    formContext.getSections().length > 0
+                        ? "justify-between"
+                        : "justify-end"
+                } mb-3`}
+            >
+                {formContext.getSections().length > 0 && (
+                    <div className="flex flex-row gap-x-1.5 items-center">
+                        <select
+                            className="ring-1 ring-blue-300 focus:ring-1 focus:ring-blue-500 rounded-md p-1.5"
+                            onChange={(e) =>
+                                formContext.addQuestionToSection(
+                                    questionId,
+                                    e.target.value
+                                )
+                            }
+                            value={selectedSection.id}
+                        >
+                            <option value={0}>Assign Section</option>
+                            {formContext.getSections().map((section) => (
+                                <option value={section.id} key={section.id}>
+                                    Section {section.number}
+                                </option>
+                            ))}
+                        </select>
+                        {selectedSection && (
+                            <div className="p-1 text-gray-600">
+                                Section : {selectedSection.number}
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 <button
-                    className="bg-blue-300 hover:bg-blue-500 text-white p-1 rounded-md transition-colors cursor-pointer"
+                    className="bg-blue-300 hover:bg-blue-500 text-white p-1 px-1 rounded-md transition-colors cursor-pointer"
                     title="delete question"
                     onClick={() => formContext.removeFormQuestion(questionId)}
                 >
@@ -43,6 +77,7 @@ export default function Question({ questionId, content }) {
                 <select
                     className="ring-1 ring-blue-300 focus:ring-1 focus:ring-blue-500 rounded-md p-1.5"
                     onChange={(e) => setChoice(e.target.value)}
+                    // value={formContext.choice}
                 >
                     <option value="multiple_choice">Multiple Choice</option>
                     <option value="check_box">Check Box</option>
@@ -69,13 +104,39 @@ export default function Question({ questionId, content }) {
             </div>
             <div id="choices" className="mt-3 p-2">
                 {choice === "multiple_choice" && (
-                    <MultipleChoice questionId={questionId} />
+                    <MultipleChoice
+                        key={useId()}
+                        questionId={questionId}
+                        choice={choice}
+                    />
                 )}
-                {choice === "check_box" && <CheckBox questionId={questionId} />}
-                {choice === "written" && <Written questionId={questionId} />}
-                {choice === "yes_no" && <YesNo questionId={questionId} />}
+                {choice === "check_box" && (
+                    <CheckBox
+                        key={useId()}
+                        questionId={questionId}
+                        choice={choice}
+                    />
+                )}
+                {choice === "written" && (
+                    <Written
+                        key={useId()}
+                        questionId={questionId}
+                        choice={choice}
+                    />
+                )}
+                {choice === "yes_no" && (
+                    <YesNo
+                        key={useId()}
+                        questionId={questionId}
+                        choice={choice}
+                    />
+                )}
                 {choice === "likert_scale" && (
-                    <LikertScale questionId={questionId} />
+                    <LikertScale
+                        key={useId()}
+                        questionId={questionId}
+                        choice={choice}
+                    />
                 )}
             </div>
         </li>

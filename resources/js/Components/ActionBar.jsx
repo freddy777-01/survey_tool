@@ -1,12 +1,16 @@
 import { CgAddR } from "react-icons/cg";
 import { FormContext } from "@/utilities/FormProvider";
-import React, { useContext } from "react";
+import React, { useContext, useEffect } from "react";
 import ShortUniqueId from "short-unique-id";
 import { TiEqualsOutline } from "react-icons/ti";
 
 export default function ActionBar({ questionId }) {
     const formContext = useContext(FormContext);
     const uid = new ShortUniqueId({ length: 10 });
+
+    /* useEffect(() => {
+        console.log(formContext.getFormQuestions());
+    }, [formContext.getFormQuestions()]); */
 
     return (
         <div className="flex flex-row justify-center items-center">
@@ -24,7 +28,7 @@ export default function ActionBar({ questionId }) {
                 <button
                     className="flex flex-row justify-center items-center bg-blue-300 p-2 rounded-lg cursor-pointer"
                     title="add question"
-                    onClick={formContext.addFormQuestion}
+                    onClick={formContext.addSection}
                 >
                     <TiEqualsOutline className="mx-auto" title="" />
                     <span className="text-gray-700 font-semibold mx-2">

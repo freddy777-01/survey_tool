@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useEffect } from "react";
 import Layout from "./Layout";
 import ActionBar from "@/Components/ActionBar";
 import Question from "@/Components/Question";
 import { FormContext, FormProvider } from "@/Utilities/FormProvider";
 import { TbZoomQuestion } from "react-icons/tb";
+import Sections from "../Components/Sections";
 
 function welcome() {
     return (
@@ -14,12 +15,21 @@ function welcome() {
 }
 
 function Form() {
+    const formContext = React.useContext(FormContext);
     const [formTitle, setFormTitle] = React.useState("");
     const [questions, setQuestions] = React.useState([]);
-    const formContext = React.useContext(FormContext);
+
+    /* useEffect(() => {
+        // console.log(formContext.formQuestions);
+        // setQuestions(formContext.getFormQuestions());
+    }, [formContext.formQuestions]); */
+
     return (
         <div className="p-5">
             <ActionBar />
+            <div className="absolute top-[7rem] left-[6rem] rounded-md">
+                <Sections />
+            </div>
             <Layout>
                 <div className="" id="survey-form">
                     <div className=" w-[40rem] p-2 rounded-lg shadow-lg bg-gray-100">
@@ -27,7 +37,7 @@ function Form() {
                             <span className="text-black font-semibold">
                                 Title :
                             </span>{" "}
-                            {formTitle ? formTitle : "Form Title"}
+                            {formTitle ? formTitle : "................."}
                         </p>
                         <div className="p-2">
                             <input
@@ -41,9 +51,12 @@ function Form() {
                     </div>
                     <div className="mt-5">
                         {/* <p className="text-left text-gray-500 p-1">Questions</p> */}
-                        {formContext.formQuestions.length > 0 ? (
+
+                        {formContext.getFormQuestions().length > 0 ? (
                             <ul id="questions" className="">
-                                {formContext.formQuestions.map((q, index) => (
+                                {formContext.getFormQuestions().map((q) => (
+                                    // (q, index) => console.log(q.id)
+
                                     <Question
                                         questionId={q.id}
                                         key={q.id}

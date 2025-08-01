@@ -1,8 +1,13 @@
 import React from "react";
+import { FormContext } from "@/utilities/FormProvider";
 
-export default function Written({ questionId }) {
+export default function Written({ questionId, choice }) {
+    const formContext = React.useContext(FormContext);
     const [answer, setAnswer] = React.useState("");
 
+    React.useEffect(() => {
+        formContext.changeAnswerStructure(questionId, choice, []);
+    }, [choice]);
     return (
         <div>
             <textarea

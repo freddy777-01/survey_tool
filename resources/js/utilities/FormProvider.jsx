@@ -3,12 +3,11 @@ import React from "react";
 
 const FormContext = React.createContext();
 
-//TODO => question structure state in Question component should be global state.
 //TODO => The form should have a description... state description should be in formProvider
-//TODO => Complete section functionality,
+
 function FormProvider({ children }) {
     const [formQuestions, setFormQuestions] = React.useState([]);
-    const [sections, addSections] = React.useState([]);
+    const [sections, setSections] = React.useState([]);
     const [formDescription, setFormDescription] = React.useState("");
 
     const addFormDescription = (d) => setFormDescription(d);
@@ -21,11 +20,12 @@ function FormProvider({ children }) {
         let id = moment().valueOf();
         let section = {
             id,
+            name: "",
             number: sections.length + 1,
             description: "Section Description",
             questions: [],
         };
-        addSections((sections) => [...sections, section]);
+        setSections((sections) => [...sections, section]);
     };
     const addQuestionToSection = (questionId, sectionId) => {
         if (sectionId == 0) return;
@@ -39,15 +39,51 @@ function FormProvider({ children }) {
             }
             return section;
         });
-        addSections(updatedSections);
+        setSections(updatedSections);
 
         // console.log(sections);
     };
-    const removeSection = () => {
-        //TODO => Complete this function
+    const removeSection = (sectionId) => {
+        let newSections = sections.filter(
+            (section) => section.id !== sectionId
+        );
+        setSections(newSections);
+    };
+
+    const checkEmptySections = () => {
+        //TODO => saving data can proceed here if conditions are met. or a flag should be set in boolean form to allow saving the data or not
+        /***
+         * This function will check if sections were created, check if the available questions are not assign to existing sections.
+         * If sections are available, then each question has to be assigned to a section, If not, then the form will not be submitted.
+         */
+
+        let questionsNotInSections = [];
+        if (sections.length > 0) {
+            // if sections are available
+            sections.forEach((section) => {
+                let sectionQuestions = section.questions;
+                formQuestions.forEach((q) => {
+                    if (!sectionQuestions.includes(q.id))
+                        // console.log("trying to check empty questions");
+                        questionsNotInSections.push(q.id);
+                });
+            });
+        }
+        return questionsNotInSections;
+    };
+
+    const editSectionName = (sectionId, name) => {
+        let updatedSections = sections.map((section) => {
+            if (section.id == sectionId) {
+                section.name = name;
+            }
+            return section;
+        });
+        setSections(updatedSections);
     };
     // End of sections
 
+    // Dealing with questions
     const addFormQuestion = () => {
         // creating question instance, and adding it to formQuestions
         /*  console.log(
@@ -110,7 +146,7 @@ function FormProvider({ children }) {
             section.questions = section.questions.filter((qId) => qId !== id);
             return section;
         });
-        addSections(updateSections);
+        setSections(updateSections);
         setFormQuestions(newQuestions);
         // console.log(newQuestions);
     };
@@ -190,6 +226,7 @@ function FormProvider({ children }) {
         setFormQuestions(updatedQuestions);
     };
 
+    // End dealing with questions
     return (
         <FormContext.Provider
             value={{
@@ -202,10 +239,14 @@ function FormProvider({ children }) {
                 changeChoiceLabel,
                 changeAnswerStructure,
                 getFormQuestions,
-                //sections
+                //dealing with sections
                 addSection,
                 getSections: () => sections,
                 addQuestionToSection,
+                removeSection,
+                editSectionName,
+                checkEmptySections,
+                //end dealing with sections
             }}
         >
             {children}

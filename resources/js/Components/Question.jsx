@@ -44,13 +44,18 @@ export default function Question({ questionId, content }) {
                             <option value={0}>Assign Section</option>
                             {formContext.getSections().map((section) => (
                                 <option value={section.id} key={section.id}>
-                                    Section {section.number}
+                                    {section.name === ""
+                                        ? `Section : ${section.number}`
+                                        : section.name}
                                 </option>
                             ))}
                         </select>
+
                         {selectedSection && (
                             <div className="p-1 text-gray-600">
-                                Section : {selectedSection.number}
+                                {selectedSection.name === ""
+                                    ? `Section : ${selectedSection.number}`
+                                    : selectedSection.name}
                             </div>
                         )}
                     </div>

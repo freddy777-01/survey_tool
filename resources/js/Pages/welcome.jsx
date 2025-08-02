@@ -5,7 +5,13 @@ import Question from "@/Components/Question";
 import { FormContext, FormProvider } from "@/Utilities/FormProvider";
 import { TbZoomQuestion } from "react-icons/tb";
 import Sections from "../Components/Sections";
+import { ToastContainer, toast } from "react-toastify";
 
+//TODO => create a saving button here
+/**
+ *
+ * THe saving button will appear if there are questions on the form, either, the button will be disabled or hidden
+ */
 function welcome() {
     return (
         <FormProvider>
@@ -26,12 +32,15 @@ function Form() {
 
     return (
         <div className="p-5">
-            <ActionBar />
-            <div className="absolute top-[7rem] left-[6rem] rounded-md">
+            <ToastContainer position="top-center" />
+            <div className="fixed top-0 left-0 z-10 pt-4  w-full h-[4rem] mb-[5rem] flex justify-center items-center">
+                <ActionBar toast={toast} />
+            </div>
+            <div className="absolute  max-md:left-[7rem] top-[7rem] left-[6rem] rounded-md">
                 <Sections />
             </div>
             <Layout>
-                <div className="" id="survey-form">
+                <div className="mt-[2.5rem]" id="survey-form">
                     <div className=" w-[40rem] p-2 rounded-lg shadow-lg bg-gray-100">
                         <p className="text-left text-gray-500 p-2">
                             <span className="text-black font-semibold">

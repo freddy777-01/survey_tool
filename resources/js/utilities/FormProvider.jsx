@@ -9,10 +9,27 @@ function FormProvider({ children }) {
     const [formQuestions, setFormQuestions] = React.useState([]);
     const [sections, setSections] = React.useState([]);
     const [formDescription, setFormDescription] = React.useState("");
+    const [formTitle, setFormTitle] = React.useState("");
+    const [isFormDescription, setIsFormDescription] = React.useState(false);
+    const [formState, setFormState] = React.useState({});
 
-    const addFormDescription = (d) => setFormDescription(d);
-    const getFormDescription = () => formDescription;
+    //The Form
+    const _formState = () => formState;
+    //End of form
+
+    // Form description
+    const _isFormDescription = () => isFormDescription;
+    const _setIsFormDescription = (d) => setIsFormDescription(d);
+    const _setFormDescription = (d) => setFormDescription(d);
+    const _formDescription = () => formDescription;
+    // End of form description
+
     const getFormQuestions = () => formQuestions;
+
+    // Form Title
+    const _formTitle = () => formTitle;
+    const _setFormTitle = (t) => setFormTitle(t);
+    // End of form title
 
     //Dealing with sections
     const addSection = () => {
@@ -58,18 +75,24 @@ function FormProvider({ children }) {
          */
 
         let questionsNotInSections = [];
+        let questionsInEitherSections = [];
         if (sections.length > 0) {
             // if sections are available
             sections.forEach((section) => {
-                let sectionQuestions = section.questions;
-                formQuestions.forEach((q) => {
-                    if (!sectionQuestions.includes(q.id))
-                        // console.log("trying to check empty questions");
-                        questionsNotInSections.push(q.id);
-                });
+                // let sectionQuestions = section.questions;
+                for (let i = 0; i < section.questions.length; i++) {
+                    questionsInEitherSections.push(section.questions[i]);
+                }
+            });
+            formQuestions.forEach((q) => {
+                if (!questionsInEitherSections.includes(q.id)) {
+                    questionsNotInSections.push(q.id);
+                }
             });
         }
-        return questionsNotInSections;
+
+        // return questionsNotInSections;
+        return questionsNotInSections.length > 0 ? true : false;
     };
 
     const editSectionName = (sectionId, name) => {
@@ -225,8 +248,20 @@ function FormProvider({ children }) {
         });
         setFormQuestions(updatedQuestions);
     };
-
     // End dealing with questions
+
+    // compiling data before saving
+    const compileForm = () => {
+        //TODO => This part does not work start with it
+        setFormState({
+            title: formTitle,
+            description: formDescription,
+            sections: sections,
+            questions: formQuestions,
+        });
+    };
+    const submitForm = () => {};
+    // End of compiling data before saving
     return (
         <FormContext.Provider
             value={{
@@ -238,15 +273,27 @@ function FormProvider({ children }) {
                 removeQuestionChoice,
                 changeChoiceLabel,
                 changeAnswerStructure,
-                getFormQuestions,
+                getFormQuestions, // should also check if questions are available before saving the form
                 //dealing with sections
                 addSection,
                 getSections: () => sections,
                 addQuestionToSection,
                 removeSection,
                 editSectionName,
-                checkEmptySections,
+                checkEmptySections, // This will be called before save
                 //end dealing with sections
+                // form title
+                _formTitle,
+                _setFormTitle,
+                // end of form title
+                // Form description
+                _isFormDescription,
+                _setIsFormDescription,
+                _setFormDescription,
+                _formDescription,
+                // End form description
+                compileForm, // This will also be called before saving the form
+                _formState,
             }}
         >
             {children}

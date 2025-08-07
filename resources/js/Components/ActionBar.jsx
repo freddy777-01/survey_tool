@@ -6,7 +6,9 @@ import { TiEqualsOutline } from "react-icons/ti";
 import { IoMdCloudUpload } from "react-icons/io";
 import { LuEye } from "react-icons/lu";
 import { MdOutlinePublish } from "react-icons/md";
-import { Link } from "@inertiajs/react";
+import { Link, router } from "@inertiajs/react";
+import Joi from "joi";
+import { MdCreateNewFolder } from "react-icons/md";
 
 // import { ToastContainer, toast } from "react-toastify";
 
@@ -14,6 +16,7 @@ import { Link } from "@inertiajs/react";
 /**
  *
  * THe saving button will appear if there are questions on the form, either, the button will be disabled or hidden
+ *
  */
 export default function ActionBar({ questionId, toast }) {
     const formContext = useContext(FormContext);
@@ -24,17 +27,158 @@ export default function ActionBar({ questionId, toast }) {
         console.log(formContext.getFormQuestions());
     }, [formContext.getFormQuestions()]); */
 
+    const validator = (form) => {
+        // formContext.compileForm();
+        const latestSections = formContext.getSections();
+        const latestQuestions = formContext.getFormQuestions();
+        /*
+    *****From schema*****
+
+     form = {
+            title: formTitle,
+            description: formDescription,
+            sections: sections,
+            questions: formQuestions,
+        };
+
+         section = {
+            id,
+            name: "",
+            number: sections.length + 1,
+            description: "Section Description",
+            questions: [],
+        };
+
+        question = {
+            id,
+            q: "",
+            section:"",
+            description:""
+            answer: {
+                type: "multiple_choice", // If written structure will be empty array
+                structure: [],
+            },
+        };
+       structure = {
+                    id,
+                    name: type, //can be multi_choice/written/
+                    value: `option${q.answer.structure.length + 1}`,
+                }
+
+    ****End of form schema*****
+        */
+
+        const schema = Joi.object({
+            form_uid: Joi.number().required(),
+            title: Joi.string()
+                .required()
+                .messages({ required: "Form title is required" }),
+            description: Joi.string().allow(""),
+            sections: Joi.array()
+                .items(
+                    Joi.object({
+                        id: Joi.number(),
+                        name: Joi.string().required(),
+                        number: Joi.number(),
+                        description: Joi.string().allow(""),
+                        questions: Joi.array().items(Joi.number()),
+                    })
+                )
+                .optional(),
+            questions: Joi.array()
+                .items(
+                    Joi.object({
+                        id: Joi.number(),
+                        q: Joi.string().required(),
+                        section: Joi.number().optional().allow(""),
+                        description: Joi.string().optional().allow(""),
+                        answer: Joi.object({
+                            type: Joi.string().valid(
+                                ...[
+                                    "multiple_choice",
+                                    "check_box",
+                                    "written",
+                                    "yes_no",
+                                    "likert_scale",
+                                ]
+                            ),
+                            structure: Joi.array()
+                                .items(
+                                    Joi.object({
+                                        id: Joi.number(),
+                                        name: Joi.string(),
+                                        value: Joi.string(),
+                                    })
+                                )
+                                .optional(),
+                        }),
+                    })
+                )
+                .required(),
+        });
+
+        /* const form = {
+            title: formContext._formTitle(),
+            description: formContext._formDescription(),
+            sections: formContext.getSections(),
+            questions: formContext.getFormQuestions(),
+        }; */
+
+        const { error, value } = schema.validate(form);
+
+        if (error) {
+            console.log(error.message);
+            return false;
+        } else {
+            return true;
+        }
+
+        // validatorError().catch((e) => console.log(e));
+        /*  try {
+            } catch (error) {
+                toast.error(error + "!");
+                console.log(error);
+            } */
+    };
     const submitForm = () => {
         // console.log(formContext.getSections());
         // console.log(formContext.checkEmptySections());
+        // console.log(formContext.getFormUID());
+        /* const form = {
+            form_uid: moment().valueOf(),
+            title: formContext._formTitle(),
+            description: formContext._formDescription(),
+            sections: formContext.getSections(),
+            questions: formContext.getFormQuestions(),
+        }; */
 
         if (formContext.getFormQuestions().length === 0) {
             toast.error("Please add at least one question ");
         } else if (formContext.checkEmptySections()) {
-            toast.warning("Please assign questions to available sections");
+            toast.warning(
+                "Please assign questions to available sections or remove unassigned sections"
+            );
         } else {
-            if (formContext.compileForm()) {
-                console.log(formContext._formState());
+            // console.log(formContext._formState());
+            let form = JSON.parse(
+                localStorage.getItem(formContext.getFormUID())
+            );
+
+            if (validator(form)) {
+                router.post("/save-form", form, {
+                    preserveState: true,
+                    onSuccess: (r) => {
+                        formContext._setFormSavedStatus(true);
+                        console.log(r);
+                        toast.success("Saving successfully!");
+                    },
+                    onError: (e) => {
+                        // toast.error("Oops! Please try again");
+                        console.log(e);
+                    },
+                });
+            } else {
+                console.log("There are some errors");
             }
         }
     };
@@ -60,9 +204,33 @@ export default function ActionBar({ questionId, toast }) {
             </div>
             <div className="absolute right-[2rem] text-white font-semibold text-lg flex flex-row justify-end items-center gap-x-2">
                 <a
-                    href={"/preview"}
+                    // href={"/preview"}
                     target="_blank"
                     className="flex flex-row gap-x-2 items-center p-2 px-2 rounded-lg bg-blue-400 hover:bg-blue-500 cursor-pointer transition-colors"
+                >
+                    <MdCreateNewFolder />
+                    <span>Create</span>
+                </a>
+                <a
+                    // href={"/preview"}
+                    target="_blank"
+                    className="flex flex-row gap-x-2 items-center p-2 px-2 rounded-lg bg-blue-400 hover:bg-blue-500 cursor-pointer transition-colors"
+                    onClick={(e) => {
+                        e.preventDefault();
+                        router.get(
+                            "/preview",
+                            {
+                                form: JSON.parse(
+                                    localStorage.getItem(
+                                        formContext.getFormUID()
+                                    )
+                                ).form_uid,
+                            },
+                            {
+                                preserveState: true,
+                            }
+                        );
+                    }}
                 >
                     <LuEye />
                     <span>Preview</span>
@@ -74,8 +242,13 @@ export default function ActionBar({ questionId, toast }) {
                 </button>
 
                 <button
-                    className="flex flex-row items-center gap-x-2 p-2 px-2 rounded-lg bg-blue-400 hover:bg-blue-500 cursor-pointer transition-colors"
+                    className={`flex flex-row items-center gap-x-2 p-2 px-2 rounded-lg ${
+                        formContext._formSavedStatus()
+                            ? "bg-blue-400 hover:bg-blue-500 cursor-not-allowed"
+                            : "bg-blue-400 hover:bg-blue-500 cursor-pointer"
+                    }  transition-colors`}
                     onClick={() => submitForm()}
+                    disabled={formContext._formSavedStatus()}
                 >
                     <IoMdCloudUpload />
                     <span>Save</span>

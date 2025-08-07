@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('type');
             $table->string('structure');
             $table->unsignedBigInteger('question_id');
-            $table->foreign('question_id')->references('questions')->on('id');
+            $table->foreign('question_id')->references('id')->on('questions');
             $table->timestamps();
         });
     }

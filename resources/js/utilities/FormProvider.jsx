@@ -1,21 +1,93 @@
+import Joi, { number } from "joi";
 import moment from "moment";
 import React from "react";
 
 const FormContext = React.createContext();
 
-//TODO => The form should have a description... state description should be in formProvider
+/**
+ *
+ * The form will have form_uid, that will be used to update the form on the database,
+ * will also be used to track changes and store them on local storage on the browser.
+ *
+ */
 
 function FormProvider({ children }) {
     const [formQuestions, setFormQuestions] = React.useState([]);
+    const [formUID, setFormUID] = React.useState("");
     const [sections, setSections] = React.useState([]);
     const [formDescription, setFormDescription] = React.useState("");
     const [formTitle, setFormTitle] = React.useState("");
     const [isFormDescription, setIsFormDescription] = React.useState(false);
+
     const [formState, setFormState] = React.useState({});
 
+    const [formSavedStatus, setFormSavedStatus] = React.useState(false);
+
+    React.useEffect(() => {
+        // update the form object if it exits on browser history
+        localStorage.clear();
+        let form_uid = moment().valueOf();
+        setFormUID(form_uid);
+
+        let form = JSON.parse(localStorage.getItem("form"));
+        setFormState(form);
+    }, []);
+
+    React.useEffect(() => {
+        // Update the form object when some variables are changed
+        setFormSavedStatus(false);
+
+        let form = {
+            form_uid: formUID,
+            title: formTitle,
+            description: formDescription,
+            sections: sections,
+            questions: formQuestions,
+        };
+        if (formUID != "") localStorage.setItem(formUID, JSON.stringify(form));
+        setFormState(form);
+    }, [formTitle, formDescription, formQuestions, sections]);
+
     //The Form
+    /*
+    *****From schema*****
+
+     form = {
+            title: formTitle,
+            description: formDescription,
+            sections: sections,
+            questions: formQuestions,
+        };
+
+         section = {
+            id,
+            name: "",
+            number: sections.length + 1,
+            description: "Section Description",
+            questions: [],
+        };
+
+        question = {
+            id,
+            q: "",
+            answer: {
+                type: "multiple_choice", // If written structure will be empty array
+                structure: [],
+            },
+        };
+       structure = {
+                    id,
+                    name: type, //can be multi_choice/written/
+                    value: `option${q.answer.structure.length + 1}`,
+                }
+
+    ****End of form schema*****
+        */
+
     const _formState = () => formState;
     //End of form
+
+    //Form save status
 
     // Form description
     const _isFormDescription = () => isFormDescription;
@@ -43,6 +115,17 @@ function FormProvider({ children }) {
             questions: [],
         };
         setSections((sections) => [...sections, section]);
+        // console.log(sections);
+    };
+
+    const addSectionToQuestion = (questionId, sectionId) => {
+        let updatedQuestions = formQuestions.map((question) => {
+            if (question.id == questionId) {
+                question.section = sectionId;
+            }
+            return question;
+        });
+        setFormQuestions(updatedQuestions);
     };
     const addQuestionToSection = (questionId, sectionId) => {
         if (sectionId == 0) return;
@@ -59,12 +142,23 @@ function FormProvider({ children }) {
         setSections(updatedSections);
 
         // console.log(sections);
+        addSectionToQuestion(questionId, sectionId);
+    };
+    const removeSectionFromQuestion = (sectionId) => {
+        let updateQuestions = formQuestions.map((question) => {
+            if (sectionId == question.section) {
+                question.section = "";
+            }
+            return question;
+        });
+        setFormQuestions(updateQuestions);
     };
     const removeSection = (sectionId) => {
         let newSections = sections.filter(
             (section) => section.id !== sectionId
         );
         setSections(newSections);
+        removeSectionFromQuestion(sectionId);
     };
 
     const checkEmptySections = () => {
@@ -76,12 +170,16 @@ function FormProvider({ children }) {
 
         let questionsNotInSections = [];
         let questionsInEitherSections = [];
+        let sectionsWithNoQuestions = [];
         if (sections.length > 0) {
             // if sections are available
             sections.forEach((section) => {
                 // let sectionQuestions = section.questions;
                 for (let i = 0; i < section.questions.length; i++) {
                     questionsInEitherSections.push(section.questions[i]);
+                }
+                if (section.questions.length == 0) {
+                    sectionsWithNoQuestions.push(section.id);
                 }
             });
             formQuestions.forEach((q) => {
@@ -92,7 +190,9 @@ function FormProvider({ children }) {
         }
 
         // return questionsNotInSections;
-        return questionsNotInSections.length > 0 ? true : false;
+        return questionsNotInSections.length > 0 || questionsNotInSections > 0
+            ? true
+            : false;
     };
 
     const editSectionName = (sectionId, name) => {
@@ -104,6 +204,7 @@ function FormProvider({ children }) {
         });
         setSections(updatedSections);
     };
+
     // End of sections
 
     // Dealing with questions
@@ -120,6 +221,8 @@ function FormProvider({ children }) {
         let question = {
             id,
             q: "",
+            section: "",
+            description: "",
             answer: {
                 type: "multiple_choice",
                 structure: [],
@@ -252,13 +355,14 @@ function FormProvider({ children }) {
 
     // compiling data before saving
     const compileForm = () => {
-        //TODO => This part does not work start with it
-        setFormState({
+        //TODO => This part does not work as required
+        let form = {
             title: formTitle,
             description: formDescription,
             sections: sections,
             questions: formQuestions,
-        });
+        };
+        setFormState(form);
     };
     const submitForm = () => {};
     // End of compiling data before saving
@@ -294,6 +398,13 @@ function FormProvider({ children }) {
                 // End form description
                 compileForm, // This will also be called before saving the form
                 _formState,
+                _setFormState: (f) => setFormState(f),
+                //formUID
+                getFormUID: () => formUID,
+
+                //formSave status
+                _formSavedStatus: () => formSavedStatus,
+                _setFormSavedStatus: (s) => setFormSavedStatus(s),
             }}
         >
             {children}

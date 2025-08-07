@@ -14,12 +14,13 @@ return new class extends Migration
         //
         Schema::create('forms', function (Blueprint $table) {
             $table->id();
+            $table->bigInteger('form_uid')->unique();
             $table->string('name');
             $table->string('description')->nullable();
             $table->boolean('published');
             $table->string('status');
-            $table->timestamp('begin_date');
-            $table->timestamp('end_date');
+            $table->date('begin_date')->nullable(); //TODO-> remember to remove nullable
+            $table->date('end_date')->nullable(); //TODO-> remember to remove nullable
             $table->timestamps();
         });
     }

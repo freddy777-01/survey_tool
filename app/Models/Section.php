@@ -9,6 +9,7 @@ class Section extends Model
     //
     protected $fillable = [
         'name',
+        'section_uid',
         'form_id',
     ];
 

@@ -12,11 +12,15 @@ return new class extends Migration
     public function up(): void
     {
         //
-        Schema::create('sections', function (Blueprint $table) {
+        Schema::create('questions', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            $table->bigInteger('question_uid')->unique();
+            $table->string('question');
+            $table->string('description')->nullable();
             $table->unsignedBigInteger('form_id');
+            $table->unsignedBigInteger('section_id')->nullable();
             $table->foreign('form_id')->references('id')->on('forms');
+            $table->foreign('section_id')->references('id')->on('sections');
             $table->timestamps();
         });
     }
@@ -27,6 +31,6 @@ return new class extends Migration
     public function down(): void
     {
         //
-        Schema::dropIfExists('sections');
+        Schema::dropIfExists('questions');
     }
 };

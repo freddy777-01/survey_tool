@@ -10,6 +10,7 @@ class Form extends Model
 
     protected $fillable = [
         'name',
+        'form_uid',
         'description',
         'published',
         'status',

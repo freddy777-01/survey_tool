@@ -1,12 +1,11 @@
 <?php
 
+use App\Http\Controllers\FormController;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return Inertia::render('welcome');
-});
+Route::get('/', [FormController::class, 'index']);
 
-Route::get('/preview', function () {
-    return Inertia::render('Preview/Preview');
-});
+Route::get('/preview', [FormController::class, 'preview']);
+
+Route::post('/save-form', [FormController::class, 'store']);

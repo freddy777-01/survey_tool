@@ -8,7 +8,8 @@ class Question extends Model
 {
     //
     protected $fillable = [
-        'name',
+        'question',
+        'question_uid',
         'description',
         'form_id',
         'section_id',

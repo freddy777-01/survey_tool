@@ -12,14 +12,12 @@ return new class extends Migration
     public function up(): void
     {
         //
-        Schema::create('questions', function (Blueprint $table) {
+        Schema::create('sections', function (Blueprint $table) {
             $table->id();
+            $table->bigInteger('section_uid')->unique();
             $table->string('name');
-            $table->string('description');
             $table->unsignedBigInteger('form_id');
-            $table->unsignedBigInteger('section_id');
-            $table->foreign('form_id')->references('forms')->on('id');
-            $table->foreign('section_id')->references('sections')->on('id');
+            $table->foreign('form_id')->references('id')->on('forms');
             $table->timestamps();
         });
     }
@@ -30,6 +28,6 @@ return new class extends Migration
     public function down(): void
     {
         //
-        Schema::dropIfExists('questions');
+        Schema::dropIfExists('sections');
     }
 };

@@ -6,7 +6,8 @@ import MultipleChoice from "../../Components/MultipleChoice";
 import Question from "../../Components/Question";
 
 //TODO : Complete preview page
-//TODO : In case there are sections some question sections are placed on their specific file
+
+//FIXME ::In case there are sections some question sections are placed on their specific file
 const Preview = ({ form }) => {
     const formContext = React.useContext(FormContext);
     // const [formState, setFormState] = React.useState(form.form);

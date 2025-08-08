@@ -1,12 +1,17 @@
 import React from "react";
 import { FormContext } from "@/utilities/FormProvider";
 
-export default function Written({ questionId, choice }) {
+export default function Written({
+    questionId,
+    choice,
+    formMode,
+    structure = [],
+}) {
     const formContext = React.useContext(FormContext);
     const [answer, setAnswer] = React.useState("");
 
     React.useEffect(() => {
-        formContext.changeAnswerStructure(questionId, choice, []);
+        formContext.changeAnswerStructure(questionId, choice, structure);
     }, [choice]);
     return (
         <div>
@@ -17,7 +22,9 @@ export default function Written({ questionId, choice }) {
                 value={answer}
                 onChange={(e) => setAnswer(e.target.value)}
                 className="resize-none focus:outline-none ring-1 ring-blue-300 focus:ring-1 focus:ring-blue-500 rounded-md p-1.5"
-                disabled={true}
+                disabled={
+                    formMode === "create" || formMode === "edit" ? true : false
+                }
             ></textarea>
         </div>
     );

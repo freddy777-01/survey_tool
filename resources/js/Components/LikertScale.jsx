@@ -5,7 +5,7 @@ import { CgAddR } from "react-icons/cg";
 import { FormContext } from "@/utilities/FormProvider";
 import moment from "moment";
 
-export default function LikertScale({ questionId, choice }) {
+export default function LikertScale({ questionId, choice, formMode }) {
     const formContext = React.useContext(FormContext);
 
     const [choices, setChoices] = React.useState([{ value: "option1" }]);
@@ -54,7 +54,11 @@ export default function LikertScale({ questionId, choice }) {
                             name={"likert_scale"}
                             className="cursor-pointer h-5 w-5 border focus:outline-none border-slate-300 transition-all checked:bg-blue-300 focus:ring-1 rounded-md p-1.5"
                             id={scale.name}
-                            disabled={true}
+                            disabled={
+                                formMode === "create" || formMode === "edit"
+                                    ? true
+                                    : false
+                            }
                         />
                         <label htmlFor={scale.name}>{scale.value}</label>
                     </div>

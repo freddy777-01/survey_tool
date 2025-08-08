@@ -35,6 +35,11 @@ class FormController extends Controller
         return Inertia::render('welcome', ['forms' => $forms]);
     }
 
+    function create(Request $request)
+    {
+        return Inertia::render('Survey/Form');
+    }
+
     private function removeCurrentFormDetails($form)
     {
         $form_uid = $form['form_uid'];
@@ -103,7 +108,7 @@ class FormController extends Controller
                             $question = Question::updateOrCreate(
                                 ['question_uid' => $q['id']],
                                 [
-                                    'question' => $q['q'],
+                                    'question' => $q['question'],
                                     'description' => $q['description'],
                                     'form_id' => $newForm->id,
                                     'section_id' => $section->id,
@@ -123,6 +128,30 @@ class FormController extends Controller
                         }
                     }
                 }
+            } else {
+                foreach ($form['questions'] as $q) {
+                    // $question = new Question();
+                    $question = Question::updateOrCreate(
+                        ['question_uid' => $q['id']],
+                        [
+                            'question' => $q['q'],
+                            'description' => $q['description'],
+                            'form_id' => $newForm->id,
+                            // 'section_id' => $section->id,
+                            'question_uid' => $q['id']
+                        ]
+                    );
+
+
+                    /* if ($question->save()) {
+                            } */
+                    $answer = new Answer();
+
+                    $answer->type = $q['answer']['type'];
+                    $answer->structure = json_encode($q['answer']['structure']);
+                    $answer->question_id = $question->id;
+                    $answer->save();
+                }
             }
             DB::commit();
             return redirect()->back();
@@ -136,18 +165,29 @@ class FormController extends Controller
     {
 
         $form_uid = $request->query('form_uid');
-        // dd($form_uid);
         $formDetail = Form::where("form_uid", $form_uid)->first(['id', 'form_uid', 'name', 'description', 'published', 'status', 'begin_date', 'end_date']);
-        $sections = Section::where('form_id', $formDetail['id'])->get(['id', 'name', 'section_uid', 'form_id']);
-        $questions = Question::where('form_id', $formDetail['id'])->get(['id', 'question_uid', 'question', 'description', 'form_id', 'section_id'])->map(function ($question) {
-            $answers = Answer::where('question_id', $question['id'])->get(['id', 'type', 'structure', 'question_id'])->map(function ($answer) {
-                $answer['structure'] = json_decode($answer['structure']);
-                return $answer;
-            });
 
-            $question['answers'] = $answers;
+
+        $sections = Section::where('form_id', $formDetail['id'])->get(['id', 'name', 'section_uid', 'form_id']);
+
+        $questions = Question::where('form_id', $formDetail['id'])->get(['id', 'question_uid', 'question', 'description', 'form_id', 'section_id'])->map(function ($question) {
+            $answer = Answer::where('question_id', $question['id'])->first(['id', 'type', 'structure', 'question_id']);
+            $answer['structure'] = json_decode($answer['structure']);
+
+            $question['answer'] = $answer;
             return $question;
         });
+
+        if (count(Section::where('form_id', $formDetail['id'])->get(['id', 'name', 'section_uid', 'form_id'])) > 0) {
+            $sections = $sections->map(function ($section) use ($questions) {
+                $section['questions'] = $questions->where('section_id', $section['id']);
+                return $section;
+            });
+        } else {
+            $sections = [];
+        }
+
+
         $form = ['form' => $formDetail, 'sections' => $sections, 'questions' => $questions];
 
         return Inertia::render('Preview/Preview', ['form' => $form]);

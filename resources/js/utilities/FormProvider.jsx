@@ -4,6 +4,8 @@ import React from "react";
 
 const FormContext = React.createContext();
 
+//TODO : create own validation function to validate for structure content
+
 /**
  *
  * The form will have form_uid, that will be used to update the form on the database,
@@ -23,11 +25,16 @@ function FormProvider({ children }) {
 
     const [formSavedStatus, setFormSavedStatus] = React.useState(false);
 
+    const modeList = ["create", "edit", "preview"];
+    const [formMode, setFormMode] = React.useState("create");
+
     React.useEffect(() => {
         // update the form object if it exits on browser history
         localStorage.clear();
-        let form_uid = moment().valueOf();
-        setFormUID(form_uid);
+        if (formMode == "create") {
+            let form_uid = moment().valueOf();
+            setFormUID(form_uid);
+        }
 
         let form = JSON.parse(localStorage.getItem("form"));
         setFormState(form);
@@ -48,7 +55,6 @@ function FormProvider({ children }) {
         setFormState(form);
     }, [formTitle, formDescription, formQuestions, sections]);
 
-    //The Form
     /*
     *****From schema*****
 
@@ -69,7 +75,9 @@ function FormProvider({ children }) {
 
         question = {
             id,
-            q: "",
+            question: "",
+            section:"",
+            description:""
             answer: {
                 type: "multiple_choice", // If written structure will be empty array
                 structure: [],
@@ -127,6 +135,7 @@ function FormProvider({ children }) {
         });
         setFormQuestions(updatedQuestions);
     };
+
     const addQuestionToSection = (questionId, sectionId) => {
         if (sectionId == 0) return;
         // console.log("Section Id :" + sectionId);
@@ -144,6 +153,7 @@ function FormProvider({ children }) {
         // console.log(sections);
         addSectionToQuestion(questionId, sectionId);
     };
+
     const removeSectionFromQuestion = (sectionId) => {
         let updateQuestions = formQuestions.map((question) => {
             if (sectionId == question.section) {
@@ -210,17 +220,20 @@ function FormProvider({ children }) {
     // Dealing with questions
     const addFormQuestion = () => {
         // creating question instance, and adding it to formQuestions
+        // console.log("adding question");
+
         /*  console.log(
             "Current FormQuestions :" +
                 formQuestions +
                 "question Id :" +
                 moment().valueOf()
         ); */
+
         let id = moment().valueOf();
 
         let question = {
             id,
-            q: "",
+            question: "",
             section: "",
             description: "",
             answer: {
@@ -238,7 +251,7 @@ function FormProvider({ children }) {
         // updating or writing new question
         let updatedQuestions = formQuestions.map((q) => {
             if (q.id === questionId) {
-                q.q = qn;
+                q.question = qn;
             }
             return q;
         });
@@ -372,6 +385,7 @@ function FormProvider({ children }) {
                 addFormQuestion,
                 removeFormQuestion,
                 // formQuestions,
+                setFormQuestions: (questions) => setFormQuestions(questions),
                 writeQuestion,
                 addQuestionChoice,
                 removeQuestionChoice,
@@ -401,10 +415,14 @@ function FormProvider({ children }) {
                 _setFormState: (f) => setFormState(f),
                 //formUID
                 getFormUID: () => formUID,
+                setFormUID: (uid) => setFormUID(uid),
 
                 //formSave status
                 _formSavedStatus: () => formSavedStatus,
                 _setFormSavedStatus: (s) => setFormSavedStatus(s),
+                //Form Mode
+                getFormMode: () => formMode,
+                setFormMode: (mode) => setFormMode(mode),
             }}
         >
             {children}

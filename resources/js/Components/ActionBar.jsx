@@ -15,7 +15,7 @@ import { MdCreateNewFolder } from "react-icons/md";
 //TODO => create a saving button here
 /**
  *
- * THe saving button will appear if there are questions on the form, either, the button will be disabled or hidden
+ * The preview button should be anabled if there is a saved status on state
  *
  */
 export default function ActionBar({ questionId, toast }) {
@@ -23,6 +23,7 @@ export default function ActionBar({ questionId, toast }) {
     const uid = new ShortUniqueId({ length: 10 });
     const notify = () => toast("Wow so easy!");
 
+    let formSavedStatus = formContext._formSavedStatus();
     /* useEffect(() => {
         console.log(formContext.getFormQuestions());
     }, [formContext.getFormQuestions()]); */
@@ -51,7 +52,7 @@ export default function ActionBar({ questionId, toast }) {
 
         question = {
             id,
-            q: "",
+            question: "",
             section:"",
             description:""
             answer: {
@@ -89,7 +90,7 @@ export default function ActionBar({ questionId, toast }) {
                 .items(
                     Joi.object({
                         id: Joi.number(),
-                        q: Joi.string().required(),
+                        question: Joi.string().required(),
                         section: Joi.number().optional().allow(""),
                         description: Joi.string().optional().allow(""),
                         answer: Joi.object({
@@ -156,7 +157,8 @@ export default function ActionBar({ questionId, toast }) {
             toast.error("Please add at least one question ");
         } else if (formContext.checkEmptySections()) {
             toast.warning(
-                "Please assign questions to available sections or remove unassigned sections"
+                "Please assign questions to available sections or remove unassigned sections",
+                { className: "w-[20rem]" }
             );
         } else {
             // console.log(formContext._formState());
@@ -211,16 +213,26 @@ export default function ActionBar({ questionId, toast }) {
                     <MdCreateNewFolder />
                     <span>Create</span>
                 </a>
-                <a
+                <button
                     // href={"/preview"}
-                    target="_blank"
-                    className="flex flex-row gap-x-2 items-center p-2 px-2 rounded-lg bg-blue-400 hover:bg-blue-500 cursor-pointer transition-colors"
+                    // target="_blank"
+                    className={`flex flex-row gap-x-2 items-center p-2 px-2 rounded-lg bg-blue-400 hover:bg-blue-500  transition-colors ${
+                        !formContext._formSavedStatus()
+                            ? "cursor-not-allowed"
+                            : "cursor-pointer"
+                    }`}
                     onClick={(e) => {
+                        /* console.log(
+                            JSON.parse(
+                                localStorage.getItem(formContext.getFormUID())
+                            ).form_uid
+                        ); */
+                        // window.open("", "_blank");
                         e.preventDefault();
                         router.get(
                             "/preview",
                             {
-                                form: JSON.parse(
+                                form_uid: JSON.parse(
                                     localStorage.getItem(
                                         formContext.getFormUID()
                                     )
@@ -231,10 +243,11 @@ export default function ActionBar({ questionId, toast }) {
                             }
                         );
                     }}
+                    disabled={!formContext._formSavedStatus() ? true : false}
                 >
                     <LuEye />
                     <span>Preview</span>
-                </a>
+                </button>
 
                 <button className="flex flex-row gap-x-2 items-center p-2 px-2 rounded-lg bg-blue-400 hover:bg-blue-500 cursor-pointer transition-colors">
                     <MdOutlinePublish />

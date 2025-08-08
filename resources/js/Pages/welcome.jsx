@@ -9,19 +9,14 @@ import { ToastContainer, toast } from "react-toastify";
 import { MdEditNote } from "react-icons/md";
 import { FcSurvey } from "react-icons/fc";
 import { router } from "@inertiajs/react";
-//TODO
-/**
- *
- * 1.  add side card to add extra information that will indicate from time and end time for the survey
- *
- *  On form creation, user should be directed first to add section if sections are to be added first
- */
+
 function welcome({ forms }) {
     console.log(forms);
 
     return (
         <Layout>
             <p>Dashboard</p>
+            <a href="/survey/create">Create</a>
             <div className="grid grid-cols-5 gap-2">
                 {forms.length > 0 ? (
                     forms.map((form, index) => (

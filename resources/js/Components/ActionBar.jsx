@@ -9,6 +9,7 @@ import { MdOutlinePublish } from "react-icons/md";
 import { Link, router } from "@inertiajs/react";
 import Joi from "joi";
 import { MdCreateNewFolder } from "react-icons/md";
+import { ValidatorForm } from "@/utilities/FormValidator";
 
 // import { ToastContainer, toast } from "react-toastify";
 
@@ -153,7 +154,15 @@ export default function ActionBar({ questionId, toast }) {
             questions: formContext.getFormQuestions(),
         }; */
 
-        if (formContext.getFormQuestions().length === 0) {
+        let form = JSON.parse(localStorage.getItem(formContext.getFormUID()));
+        const validation = ValidatorForm(form);
+        if (!validation.valid) {
+            toast.warning(validation.message);
+        } else {
+            console.log("Form is valid");
+        }
+
+        /* if (formContext.getFormQuestions().length === 0) {
             toast.error("Please add at least one question ");
         } else if (formContext.checkEmptySections()) {
             toast.warning(
@@ -161,7 +170,6 @@ export default function ActionBar({ questionId, toast }) {
                 { className: "w-[20rem]" }
             );
         } else {
-            // console.log(formContext._formState());
             let form = JSON.parse(
                 localStorage.getItem(formContext.getFormUID())
             );
@@ -175,14 +183,13 @@ export default function ActionBar({ questionId, toast }) {
                         toast.success("Saving successfully!");
                     },
                     onError: (e) => {
-                        // toast.error("Oops! Please try again");
                         console.log(e);
                     },
                 });
             } else {
                 console.log("There are some errors");
             }
-        }
+        } */
     };
     return (
         <div className="flex flex-row justify-center items-center">

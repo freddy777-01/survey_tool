@@ -11,7 +11,7 @@ import { FcSurvey } from "react-icons/fc";
 import { router } from "@inertiajs/react";
 
 function welcome({ forms }) {
-    console.log(forms);
+    // console.log(forms);
 
     return (
         <Layout>

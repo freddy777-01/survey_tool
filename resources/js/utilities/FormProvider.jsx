@@ -4,8 +4,6 @@ import React from "react";
 
 const FormContext = React.createContext();
 
-//TODO : create own validation function to validate for structure content
-
 /**
  *
  * The form will have form_uid, that will be used to update the form on the database,

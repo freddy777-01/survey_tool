@@ -67,7 +67,10 @@ export default function CheckBox({
                                     }
                                 />
                             ) : (
-                                <label className="" htmlFor={choice.id}>
+                                <label
+                                    className="hover:cursor-pointer"
+                                    htmlFor={choice.id}
+                                >
                                     {choice.value}
                                 </label>
                             )}

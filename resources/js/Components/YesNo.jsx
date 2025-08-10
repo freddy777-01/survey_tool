@@ -3,11 +3,11 @@ import { RxCross2 } from "react-icons/rx";
 import { CgAddR } from "react-icons/cg";
 import { FormContext } from "@/utilities/FormProvider";
 
-export default function YesNo({ questionId, choice }) {
+export default function YesNo({ questionId, choice, formMode }) {
     const formContext = React.useContext(FormContext);
     const [choices, setChoices] = React.useState([
-        { name: "yes_no", value: "yes" },
-        { name: "yes_no", value: "no" },
+        { name: "yes", value: "Yes" },
+        { name: "no", value: "No" },
     ]);
 
     let updateChoices = () => {};
@@ -28,14 +28,23 @@ export default function YesNo({ questionId, choice }) {
                         key={index}
                     >
                         <input
-                            id="yes"
+                            id={choice.name}
                             type="radio"
                             value={choice.value}
-                            name={choice.name}
+                            name={"yes_no"}
                             className="cursor-pointer h-5 w-5 border border-slate-300 transition-all checked:border-blue-300 focus:ring-1 rounded-md p-1.5"
-                            disabled={true}
+                            disabled={
+                                formMode === "create" || formMode === "edit"
+                                    ? true
+                                    : false
+                            }
                         />
-                        <label htmlFor="yes">{choice.value}</label>
+                        <label
+                            htmlFor={choice.name}
+                            className="hover:cursor-pointer"
+                        >
+                            {choice.value}
+                        </label>
                         {/* <div className="flex gap-x-1.5">
                         </div> */}
                     </li>

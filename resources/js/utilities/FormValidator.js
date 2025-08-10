@@ -29,7 +29,7 @@ export function ValidatorForm(form) {
                 return {
                     valid: false,
                     message:
-                        "Choices are required for multiple choice or checkbox questions.",
+                        "Options are required for multiple choice or checkbox questions.",
                 };
             }
         }
@@ -55,20 +55,24 @@ export function ValidatorForm(form) {
                     message: "Section name is required.",
                 };
             }
-            for (let i = 0; i < section.questions.length; i++) {
-                questionsInEitherSections.push(section.questions[i]);
+            for (const question_uid of section.questions) {
+                questionsInEitherSections.push(question_uid);
             }
             if (section.questions.length == 0) {
                 sectionsWithNoQuestions.push(section.id);
             }
         });
         form.questions.forEach((q) => {
-            if (!questionsInEitherSections.includes(q.id)) {
-                questionsNotInSections.push(q.id);
-            }
+            // console.log(q.id);
+
+            if (questionsInEitherSections.length > 0)
+                if (!questionsInEitherSections.includes(q.id))
+                    questionsNotInSections.push(q.id);
         });
 
-        return questionsNotInSections.length > 0 || questionsNotInSections > 0
+        // console.log(questionsInEitherSections);
+        return questionsNotInSections.length > 0 ||
+            sectionsWithNoQuestions.length > 0
             ? {
                   valid: false,
                   message:

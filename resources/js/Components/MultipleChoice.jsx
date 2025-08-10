@@ -68,7 +68,10 @@ export default function MultipleChoice({
                                     }
                                 />
                             ) : (
-                                <label className="" htmlFor={choice.id}>
+                                <label
+                                    className="hover:cursor-pointer"
+                                    htmlFor={choice.id}
+                                >
                                     {choice.value}
                                 </label>
                             )}

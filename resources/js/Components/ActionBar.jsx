@@ -70,7 +70,7 @@ export default function ActionBar({ questionId, toast }) {
     ****End of form schema*****
         */
 
-        const schema = Joi.object({
+        /* const schema = Joi.object({
             form_uid: Joi.number().required(),
             title: Joi.string()
                 .required()
@@ -117,7 +117,7 @@ export default function ActionBar({ questionId, toast }) {
                     })
                 )
                 .required(),
-        });
+        }); */
 
         /* const form = {
             title: formContext._formTitle(),
@@ -126,14 +126,14 @@ export default function ActionBar({ questionId, toast }) {
             questions: formContext.getFormQuestions(),
         }; */
 
-        const { error, value } = schema.validate(form);
+        /* const { error, value } = schema.validate(form);
 
         if (error) {
             console.log(error.message);
             return false;
         } else {
             return true;
-        }
+        } */
 
         // validatorError().catch((e) => console.log(e));
         /*  try {
@@ -157,9 +157,22 @@ export default function ActionBar({ questionId, toast }) {
         let form = JSON.parse(localStorage.getItem(formContext.getFormUID()));
         const validation = ValidatorForm(form);
         if (!validation.valid) {
+            // console.log(form);
+
             toast.warning(validation.message);
         } else {
-            console.log("Form is valid");
+            // console.log(form);
+            router.post("/save-form", form, {
+                preserveState: true,
+                onSuccess: (r) => {
+                    formContext._setFormSavedStatus(true);
+                    // console.log(r);
+                    toast.success("Saving successfully!");
+                },
+                onError: (e) => {
+                    console.log(e);
+                },
+            });
         }
 
         /* if (formContext.getFormQuestions().length === 0) {
@@ -222,7 +235,7 @@ export default function ActionBar({ questionId, toast }) {
                 </a>
                 <button
                     // href={"/preview"}
-                    // target="_blank"
+                    target="_blank"
                     className={`flex flex-row gap-x-2 items-center p-2 px-2 rounded-lg bg-blue-400 hover:bg-blue-500  transition-colors ${
                         !formContext._formSavedStatus()
                             ? "cursor-not-allowed"
@@ -232,11 +245,18 @@ export default function ActionBar({ questionId, toast }) {
                         /* console.log(
                             JSON.parse(
                                 localStorage.getItem(formContext.getFormUID())
-                            ).form_uid
-                        ); */
+                            )
+                        );
+                        console.log(formContext.getFormUID()); */
+
                         // window.open("", "_blank");
                         e.preventDefault();
-                        router.get(
+                        const form_uid = JSON.parse(
+                            localStorage.getItem(formContext.getFormUID())
+                        ).form_uid;
+                        const url = `/preview?form_uid=${form_uid}`;
+                        window.open(url, "_blank");
+                        /* router.get(
                             "/preview",
                             {
                                 form_uid: JSON.parse(
@@ -247,10 +267,14 @@ export default function ActionBar({ questionId, toast }) {
                             },
                             {
                                 preserveState: true,
+                                onSuccess: (r) => {
+                                    // console.log(r);
+                                    window.open(r.url, "_blank");
+                                },
                             }
-                        );
+                        ); */
                     }}
-                    disabled={!formContext._formSavedStatus() ? true : false}
+                    disabled={!formContext._formSavedStatus()}
                 >
                     <LuEye />
                     <span>Preview</span>

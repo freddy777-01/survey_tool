@@ -34,8 +34,8 @@ function FormProvider({ children }) {
             setFormUID(form_uid);
         }
 
-        let form = JSON.parse(localStorage.getItem("form"));
-        setFormState(form);
+        /* let form = JSON.parse(localStorage.getItem("form"));
+        setFormState(form? form : []); */
     }, []);
 
     React.useEffect(() => {
@@ -115,7 +115,7 @@ function FormProvider({ children }) {
         let id = moment().valueOf();
         let section = {
             id,
-            name: "",
+            name: `Section ${sections.length + 1}`,
             number: sections.length + 1,
             description: "Section Description",
             questions: [],
@@ -366,7 +366,6 @@ function FormProvider({ children }) {
 
     // compiling data before saving
     const compileForm = () => {
-        //TODO => This part does not work as required
         let form = {
             title: formTitle,
             description: formDescription,

@@ -24,6 +24,7 @@ function Form() {
     useEffect(() => {
         formContext.setFormMode("create");
     }, []);
+    // console.log(formContext.getFormUID());
 
     return (
         <div className="p-5">

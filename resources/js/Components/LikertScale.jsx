@@ -60,7 +60,12 @@ export default function LikertScale({ questionId, choice, formMode }) {
                                     : false
                             }
                         />
-                        <label htmlFor={scale.name}>{scale.value}</label>
+                        <label
+                            htmlFor={scale.name}
+                            className="hover:cursor-pointer"
+                        >
+                            {scale.value}
+                        </label>
                     </div>
                 ))}
             </div>

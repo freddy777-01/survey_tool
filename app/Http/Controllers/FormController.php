@@ -43,19 +43,42 @@ class FormController extends Controller
     private function removeCurrentFormDetails($form)
     {
         $form_uid = $form['form_uid'];
+        $form_id = Form::where('form_uid', $form_uid)->value('id');
         if (count($form['sections']) > 0) {
             foreach ($form['sections'] as $key => $s) {
 
-                foreach ($form['questions'] as $key => $q) {
+                /* foreach ($form['questions'] as $key => $q) {
                     if (Section::where('section_uid', $s['id'])->exists()) {
-                        if (Question::where('form_id', Form::where('form_uid', $form_uid)->value('id'))->Where('section_id', Section::where('section_uid', $s['id']))->exists()) {
-                            if (Answer::where('question_id', Question::where('form_id', Form::where('form_uid', $form_uid)->value('id'))->Where('section_id', Section::where('section_uid', $s['id']))->value('id'))->exists()) {
-                                Answer::where('question_id', Question::where('form_id', Form::where('form_uid', $form_uid)->value('id'))->Where('section_id', Section::where('section_uid', $s['id']))->value('id'))->delete();
+                        if ($s['id'] == $q['section']) {
+                            if (Question::where('form_id', Form::where('form_uid', $form_uid)->value('id'))->Where('section_id', Section::where('section_uid', $s['id'])->value('id'))->exists()) {
+                                if (Answer::where('question_id', Question::where('form_id', Form::where('form_uid', $form_uid)->value('id'))->orWhere('section_id', Section::where('section_uid', $s['id'])->value('id'))->value('id'))->delete() > 0) {
+
+                                    Question::where('form_id', Form::where('form_uid', $form_uid)->value('id'))->Where('section_id', Section::where('section_uid', $s['id'])->value('id'))->delete();
+                                }
                             }
-                            Question::where('form_id', Form::where('form_uid', $form_uid)->value('id'))->Where('section_id', Section::where('section_uid', $s['id']))->delete();
                         }
                         Section::where('section_uid', $s['id'])->delete();
                     }
+                } */
+                $section_id = Section::where('section_uid', $s['id'])->value('id');
+                if ($section_id) {
+                    // Find all questions in this section
+                    $questions = Question::where('form_id', $form_id)
+                        ->where('section_id', $section_id)
+                        ->get();
+
+                    foreach ($questions as $question) {
+                        // Delete answers for each question
+                        Answer::where('question_id', $question->id)->delete();
+                    }
+
+                    // Now delete questions
+                    Question::where('form_id', $form_id)
+                        ->where('section_id', $section_id)
+                        ->delete();
+
+                    // Finally, delete the section
+                    Section::where('section_uid', $s['id'])->delete();
                 }
             }
         }
@@ -105,26 +128,24 @@ class FormController extends Controller
                     if ($section->save()) {
                         foreach ($form['questions'] as $q) {
                             // $question = new Question();
-                            $question = Question::updateOrCreate(
-                                ['question_uid' => $q['id']],
-                                [
-                                    'question' => $q['question'],
-                                    'description' => $q['description'],
-                                    'form_id' => $newForm->id,
-                                    'section_id' => $section->id,
-                                    'question_uid' => $q['id']
-                                ]
-                            );
-
-
-                            /* if ($question->save()) {
-                            } */
                             $answer = new Answer();
+                            if ($s['id'] == $q['section']) {
 
-                            $answer->type = $q['answer']['type'];
-                            $answer->structure = json_encode($q['answer']['structure']);
-                            $answer->question_id = $question->id;
-                            $answer->save();
+                                $question = Question::updateOrCreate(
+                                    ['question_uid' => $q['id']],
+                                    [
+                                        'question' => $q['question'],
+                                        'description' => $q['description'],
+                                        'form_id' => $newForm->id,
+                                        'section_id' => $section->id,
+                                        'question_uid' => $q['id']
+                                    ]
+                                );
+                                $answer->type = $q['answer']['type'];
+                                $answer->structure = json_encode($q['answer']['structure']);
+                                $answer->question_id = $question->id;
+                                $answer->save();
+                            }
                         }
                     }
                 }
@@ -134,7 +155,7 @@ class FormController extends Controller
                     $question = Question::updateOrCreate(
                         ['question_uid' => $q['id']],
                         [
-                            'question' => $q['q'],
+                            'question' => $q['question'],
                             'description' => $q['description'],
                             'form_id' => $newForm->id,
                             // 'section_id' => $section->id,
@@ -180,7 +201,9 @@ class FormController extends Controller
 
         if (count(Section::where('form_id', $formDetail['id'])->get(['id', 'name', 'section_uid', 'form_id'])) > 0) {
             $sections = $sections->map(function ($section) use ($questions) {
-                $section['questions'] = $questions->where('section_id', $section['id']);
+                $section['questions'] = $questions->filter(function ($question) use ($section) {
+                    return $question['section_id'] == $section['id'];
+                })->values();
                 return $section;
             });
         } else {

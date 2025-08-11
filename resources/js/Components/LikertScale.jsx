@@ -53,7 +53,7 @@ export default function LikertScale({ questionId, choice, formMode }) {
                             value={scale.value}
                             name={"likert_scale"}
                             className="cursor-pointer h-5 w-5 border focus:outline-none border-slate-300 transition-all checked:bg-blue-300 focus:ring-1 rounded-md p-1.5"
-                            id={scale.name}
+                            id={questionId + scale.name}
                             disabled={
                                 formMode === "create" || formMode === "edit"
                                     ? true
@@ -61,7 +61,7 @@ export default function LikertScale({ questionId, choice, formMode }) {
                             }
                         />
                         <label
-                            htmlFor={scale.name}
+                            htmlFor={questionId + scale.name}
                             className="hover:cursor-pointer"
                         >
                             {scale.value}

@@ -51,7 +51,7 @@ export default function MultipleChoice({
                                         ? true
                                         : false
                                 }
-                                id={choice.id}
+                                id={questionId + choice.id}
                             />
                             {formMode == "create" || formMode == "edit" ? (
                                 <input
@@ -70,7 +70,7 @@ export default function MultipleChoice({
                             ) : (
                                 <label
                                     className="hover:cursor-pointer"
-                                    htmlFor={choice.id}
+                                    htmlFor={questionId + choice.id}
                                 >
                                     {choice.value}
                                 </label>

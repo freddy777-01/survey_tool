@@ -12,7 +12,20 @@ use Inertia\Inertia;
 
 class FormController extends Controller
 {
-    //
+    //TODO =>
+    /**
+     * Published survey is active and available to specific users.
+     * the time interval controls the survey status. survey can be published but can not be attended by respondents if timeline has end.
+     * Published date should be also added to form column to indicate when it was published.
+     *
+     * *****Republishing*****
+     * Republished survey should have a different time interval, the form can not be saved till the time interval is changed.
+     * On republishing the since form status depends on time interval, the survey status will also be update to active.
+     *
+     * create a schedule that will check every day at 6pm at night it the expiry date of survey has reached so that to change status of the survey to inactive
+     */
+
+
     function index(Request $request)
     {
         $forms = Form::get(['id', 'form_uid', 'name', 'description', 'published', 'status', 'begin_date', 'end_date'])->map(function ($form) {
@@ -214,5 +227,48 @@ class FormController extends Controller
         $form = ['form' => $formDetail, 'sections' => $sections, 'questions' => $questions];
 
         return Inertia::render('Preview/Preview', ['form' => $form]);
+    }
+
+    function board(Request $request)
+    {
+        $form_uid = $request->query('form_uid');
+        $formDetail = Form::where("form_uid", $form_uid)->first(['id', 'form_uid', 'name', 'description', 'published', 'status', 'begin_date', 'end_date']);
+
+        return Inertia::render('Survey/Board', ['form' => $formDetail]);
+    }
+
+    function editView(Request $request)
+    {
+        $form_uid = $request->query('form_uid');
+        $formDetail = Form::where("form_uid", $form_uid)->first(['id', 'form_uid', 'name', 'description', 'published', 'status', 'begin_date', 'end_date']);
+
+        $sections = Section::where('form_id', $formDetail['id'])->get(['id', 'name', 'section_uid', 'form_id']);
+
+        $questions = Question::where('form_id', $formDetail['id'])->get(['id', 'question_uid', 'question', 'description', 'form_id', 'section_id'])->map(function ($question) {
+            $answer = Answer::where('question_id', $question['id'])->first(['id', 'type', 'structure', 'question_id']);
+            $answer['structure'] = json_decode($answer['structure']);
+            $question['section_uid'] = Section::where('id', $question['section_id'])->value('section_uid');
+
+            $question['answer'] = $answer;
+            return $question;
+        });
+
+        if (count(Section::where('form_id', $formDetail['id'])->get(['id', 'name', 'section_uid', 'form_id'])) > 0) {
+            $sections = $sections->map(function ($section) use ($questions) {
+                $section['questions'] = $questions->filter(function ($question) use ($section) {
+                    return $question['section_id'] == $section['id'];
+                })->values();
+                return $section;
+            });
+        } else {
+            $sections = [];
+        }
+
+        return Inertia::render('Survey/Edit', ['form' => ['main' => $formDetail, 'sections' => $sections, 'questions' => $questions]]);
+    }
+    function edit(Request $request)
+    {
+
+        dd("About to editing form ");
     }
 }

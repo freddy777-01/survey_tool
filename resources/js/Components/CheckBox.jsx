@@ -4,6 +4,8 @@ import { CgAddR } from "react-icons/cg";
 import moment from "moment";
 import { FormContext } from "@/utilities/FormProvider";
 
+//FIXME => label editing does not work due to change of questionId
+
 export default function CheckBox({
     questionId,
     choice,
@@ -42,7 +44,7 @@ export default function CheckBox({
                         <div className="flex items-center gap-x-2">
                             <input
                                 type="checkbox"
-                                id={choice.id}
+                                id={questionId + choice.id}
                                 value={choice.value}
                                 name={"check_box"}
                                 className="cursor-pointer h-5 w-5 border border-slate-300 transition-all checked:border-blue-300 focus:ring-1 rounded-md p-1.5"
@@ -69,7 +71,7 @@ export default function CheckBox({
                             ) : (
                                 <label
                                     className="hover:cursor-pointer"
-                                    htmlFor={choice.id}
+                                    htmlFor={questionId + choice.id}
                                 >
                                     {choice.value}
                                 </label>

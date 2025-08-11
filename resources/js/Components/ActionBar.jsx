@@ -13,12 +13,6 @@ import { ValidatorForm } from "@/utilities/FormValidator";
 
 // import { ToastContainer, toast } from "react-toastify";
 
-//TODO => create a saving button here
-/**
- *
- * The preview button should be anabled if there is a saved status on state
- *
- */
 export default function ActionBar({ questionId, toast }) {
     const formContext = useContext(FormContext);
     const uid = new ShortUniqueId({ length: 10 });
@@ -280,7 +274,10 @@ export default function ActionBar({ questionId, toast }) {
                     <span>Preview</span>
                 </button>
 
-                <button className="flex flex-row gap-x-2 items-center p-2 px-2 rounded-lg bg-blue-400 hover:bg-blue-500 cursor-pointer transition-colors">
+                <button
+                    className="flex flex-row gap-x-2 items-center p-2 px-2 rounded-lg bg-blue-400 hover:bg-blue-500 cursor-pointer transition-colors"
+                    disabled={!formContext._formSavedStatus()}
+                >
                     <MdOutlinePublish />
                     <span>Publish</span>
                 </button>

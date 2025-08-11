@@ -170,8 +170,7 @@ function FormProvider({ children }) {
     };
 
     const checkEmptySections = () => {
-        //TODO => saving data can proceed here if conditions are met. or a flag should be set in boolean form to allow saving the data or not
-        /***
+        /**
          * This function will check if sections were created, check if the available questions are not assign to existing sections.
          * If sections are available, then each question has to be assigned to a section, If not, then the form will not be submitted.
          */
@@ -365,13 +364,25 @@ function FormProvider({ children }) {
     // End dealing with questions
 
     // compiling data before saving
-    const compileForm = () => {
-        let form = {
-            title: formTitle,
-            description: formDescription,
-            sections: sections,
-            questions: formQuestions,
-        };
+    const alterFormState = (form) => {
+        let questions = [];
+        setFormUID(form.form_uid);
+        if (form.sections.length > 0) {
+            let updateSections = form.sections.map((section) => {
+                let questionsUIDs = [];
+                section.questions.forEach((q) => {
+                    questionsUIDs.push(q.question_uid);
+                });
+                section.questions = questionsUIDs;
+                return section;
+            });
+            setSections(updateSections);
+        }
+        setFormTitle(form.name);
+        setFormDescription(form.description);
+        setFormQuestions(form.questions);
+        setFormSavedStatus(false);
+
         setFormState(form);
     };
     const submitForm = () => {};
@@ -407,7 +418,7 @@ function FormProvider({ children }) {
                 _setFormDescription,
                 _formDescription,
                 // End form description
-                compileForm, // This will also be called before saving the form
+                alterFormState, // This will be called on form edit page
                 _formState,
                 _setFormState: (f) => setFormState(f),
                 //formUID

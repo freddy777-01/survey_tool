@@ -9,8 +9,8 @@ import YesNo from "../../Components/YesNo";
 import LikertScale from "../../Components/LikertScale";
 import { LuRefreshCw } from "react-icons/lu";
 import { router } from "@inertiajs/react";
+import CheckBox from "../../Components/CheckBox";
 
-//FIXME :: multiple choice displayed here htmlFor and Ids have same value, fix this too
 const Preview = ({ form }) => {
     const formContext = React.useContext(FormContext);
     // const [formState, setFormState] = React.useState(form.form);
@@ -25,6 +25,7 @@ const Preview = ({ form }) => {
     let formState = form;
 
     console.log(formState);
+
     return (
         <FormProvider>
             <Layout>
@@ -37,8 +38,8 @@ const Preview = ({ form }) => {
                         <span>Refresh</span>
                     </button>
                 </div>
-                <div className=" w-[40rem] p-2 rounded-lg shadow-lg bg-gray-100">
-                    <p className="text-left text-gray-500 p-2">
+                <div className=" w-[40rem] p-2 rounded-lg shadow-md">
+                    <p className="text-left text-black p-2">
                         <span className="text-black font-semibold">
                             Title :
                         </span>{" "}
@@ -78,6 +79,19 @@ const Preview = ({ form }) => {
                                                   {question.answer.type ===
                                                       "multiple_choice" && (
                                                       <MultipleChoice
+                                                          questionId={
+                                                              question.id
+                                                          }
+                                                          formMode={formMode}
+                                                          structure={
+                                                              question.answer
+                                                                  .structure
+                                                          }
+                                                      />
+                                                  )}
+                                                  {question.answer.type ===
+                                                      "check_box" && (
+                                                      <CheckBox
                                                           questionId={
                                                               question.id
                                                           }

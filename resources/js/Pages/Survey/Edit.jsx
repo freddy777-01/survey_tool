@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import Layout from "../Layout";
 import ActionBar from "@/Components/ActionBar";
 import Question from "@/Components/Question";
@@ -9,27 +9,49 @@ import { ToastContainer, toast } from "react-toastify";
 import { MdEditNote } from "react-icons/md";
 import DatePicker from "../../Components/DatePicker";
 
-//TODO
-/**
- *
- * 1.  add side card to add extra information that will indicate from time and end time for the survey
- * 2. the form will not be published if start and end time are not set
- *
- *  On form creation, user should be directed first to add section if sections are to be added first
- */
-
-function Form() {
+//TODO => then finish setting the start and end time for the survey.
+//TODO=> complete editing functionality
+export default function Edit({ form }) {
     const formContext = React.useContext(FormContext);
     const [formTitle, setFormTitle] = React.useState("");
     const [questions, setQuestions] = React.useState([]);
     const [startDate, setStartDate] = React.useState("");
     const [endDate, setEndDate] = React.useState("");
+    const [formMode, setFormMode] = React.useState("edit");
 
-    useEffect(() => {
-        formContext.setFormMode("create");
+    console.log(form);
+
+    const setSectionQuestions = () => {
+        if (form.sections.length > 0) {
+        }
+    };
+    React.useEffect(() => {
+        formContext.setFormMode("edit");
+        formContext.alterFormState(form);
+        formContext.setFormMode("edit");
     }, []);
-    // console.log(formContext.getFormUID());
 
+    const sectionMapping = (sectionUID) => {
+        if (form.sections.length > 0) {
+            let s = {
+                id: "",
+                name: "",
+                number: "",
+                description: "Section Description",
+                questions: [],
+            };
+            form.sections.forEach((section, index) => {
+                if (sectionUID == section.section_uid) {
+                    s.id = sectionUID;
+                    s.name = section.name;
+                    s.questions = section.questions;
+                    s.number = index + 1;
+                }
+            });
+            return s;
+        }
+        return {};
+    };
     return (
         <div className="p-5">
             <ToastContainer position="top-center" />
@@ -121,7 +143,12 @@ function Form() {
                                     <Question
                                         questionId={q.id}
                                         key={q.id}
-                                        content={q}
+                                        question={q}
+                                        questionChoice={q.answer.type}
+                                        defaultSection={sectionMapping(
+                                            q.section_uid
+                                        )}
+                                        // {...console.log(q)}
                                     />
                                 ))}
                             </ul>
@@ -141,5 +168,3 @@ function Form() {
         </div>
     );
 }
-
-export default Form;

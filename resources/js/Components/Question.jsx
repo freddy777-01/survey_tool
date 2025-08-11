@@ -8,17 +8,19 @@ import YesNo from "./YesNo";
 import LikertScale from "./LikertScale";
 import { LuPencilLine } from "react-icons/lu";
 
-//TODO => fixe quetion field not responding on writing
 export default function Question({
     questionId,
-    content,
-    choic = "multiple_choice",
+    question,
+    questionChoice = "multiple_choice",
     formMode = "create",
+    defaultSection = {},
 }) {
     const formContext = useContext(FormContext);
-    const [choice, setChoice] = React.useState(choic);
+    const [choice, setChoice] = React.useState(questionChoice);
     const [addDescription, setAddDescription] = React.useState(false);
-    const [selectedSection, setSelectedSection] = React.useState("");
+    const [selectedSection, setSelectedSection] =
+        React.useState(defaultSection);
+
     useEffect(() => {
         let _selectedSection = formContext.getSections().find((section) => {
             return section.questions.includes(questionId);
@@ -26,6 +28,8 @@ export default function Question({
         // console.log(content);
         setSelectedSection(_selectedSection ? _selectedSection : "");
     }, [formContext.getSections()]);
+    // console.log(selectedSection);
+
     return (
         <li className="w-[40rem] p-2 rounded-lg shadow-lg bg-gray-100 my-5 list-none">
             {(formMode == "create" || formMode == "edit") && (
@@ -46,7 +50,7 @@ export default function Question({
                                         e.target.value
                                     )
                                 }
-                                value={selectedSection.id}
+                                defaultValue={selectedSection.id}
                             >
                                 <option value={0}>Assign Section</option>
                                 {formContext.getSections().map((section) => (
@@ -85,7 +89,7 @@ export default function Question({
                     type="text"
                     placeholder="Question..."
                     className=" col-span-2 focus:outline-none focus:ring-blue-300 focus:ring-1 rounded-md p-1.5 "
-                    value={content.question}
+                    value={question.question}
                     onChange={(e) =>
                         formContext.writeQuestion(questionId, e.target.value)
                     }
@@ -100,6 +104,7 @@ export default function Question({
                         className="ring-1 ring-blue-300 focus:ring-1 focus:ring-blue-500 rounded-md p-1.5"
                         onChange={(e) => setChoice(e.target.value)}
                         // value={formContext.choice}
+                        defaultValue={questionChoice}
                     >
                         <option value="multiple_choice">Multiple Choice</option>
                         <option value="check_box">Check Box</option>
@@ -132,7 +137,7 @@ export default function Question({
                         questionId={questionId}
                         choice={choice}
                         formMode={formMode}
-                        structure={content.answer.structure}
+                        structure={question.answer.structure}
                     />
                 )}
                 {choice === "check_box" && (
@@ -141,7 +146,7 @@ export default function Question({
                         questionId={questionId}
                         choice={choice}
                         formMode={formMode}
-                        structure={content.answer.structure}
+                        structure={question.answer.structure}
                     />
                 )}
                 {choice === "written" && (

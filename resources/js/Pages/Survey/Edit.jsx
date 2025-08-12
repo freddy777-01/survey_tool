@@ -141,7 +141,7 @@ export default function Edit({ form }) {
                                     // (q, index) => console.log(q.id)
 
                                     <Question
-                                        questionId={q.id}
+                                        questionId={q.question_uid}
                                         key={q.id}
                                         question={q}
                                         questionChoice={q.answer.type}

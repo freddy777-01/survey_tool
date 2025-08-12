@@ -226,10 +226,10 @@ function FormProvider({ children }) {
                 moment().valueOf()
         ); */
 
-        let id = moment().valueOf();
+        let question_uid = moment().valueOf();
 
         let question = {
-            id,
+            question_uid,
             question: "",
             section: "",
             description: "",
@@ -314,7 +314,7 @@ function FormProvider({ children }) {
     const changeChoiceLabel = (questionId, choiceId, value) => {
         // changing the label of the question
         let updatedQuestions = formQuestions.map((q) => {
-            if (q.id === questionId) {
+            if (q.question_uid === questionId) {
                 q.answer.structure = q.answer.structure.map((c) => {
                     if (c.id === choiceId) {
                         c.value = value;

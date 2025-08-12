@@ -10,7 +10,7 @@ Route::get('/preview', [FormController::class, 'preview']);
 
 Route::post('/save-form', [FormController::class, 'store']);
 
-Route::get('/survey/create', [FormController::class, 'create']);
+Route::get('/survey/create', [FormController::class, 'createView']);
 
 Route::get('/survey/board', [FormController::class, 'board']);
 

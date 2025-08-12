@@ -48,7 +48,7 @@ class FormController extends Controller
         return Inertia::render('welcome', ['forms' => $forms]);
     }
 
-    function create(Request $request)
+    function createView(Request $request)
     {
         return Inertia::render('Survey/Form');
     }
@@ -145,7 +145,7 @@ class FormController extends Controller
                             if ($s['id'] == $q['section']) {
 
                                 $question = Question::updateOrCreate(
-                                    ['question_uid' => $q['id']],
+                                    ['question_uid' => $q['question_uid']],
                                     [
                                         'question' => $q['question'],
                                         'description' => $q['description'],

@@ -52,13 +52,14 @@ function FormProvider({
             // Process sections if they exist
             if (initialForm.sections && initialForm.sections.length > 0) {
                 const processedSections = initialForm.sections.map(
-                    (section) => ({
+                    (section, index) => ({
+                        id: section.id,
                         section_uid: section.section_uid,
                         name: section.name,
-                        number: section.number || 1,
-                        description:
-                            section.description || "Section Description",
+                        number: index + 1,
+                        description: section.description || "",
                         questions: section.questions || [],
+                        questions_uid: section.questions_uid || [],
                     })
                 );
                 setSections(processedSections);
@@ -66,7 +67,7 @@ function FormProvider({
 
             setFormSavedStatus(true);
             setIsInitialized(true);
-            console.log("Loaded form for editing:", initialForm.main.form_uid);
+            // console.log("Loaded form for editing:", initialForm.main.form_uid);
         } else if (initialMode === "preview" && initialForm) {
             // Preview mode: load form data for read-only display
             setFormUID(initialForm.form.form_uid);
@@ -92,14 +93,14 @@ function FormProvider({
 
             setFormSavedStatus(true);
             setIsInitialized(true);
-            console.log("Loaded form for preview:", initialForm.form.form_uid);
+            // console.log("Loaded form for preview:", initialForm.form.form_uid);
         }
     }, [initialMode, initialForm]);
 
     // Update localStorage only for create and edit modes, not preview
     React.useEffect(() => {
         if (formMode === "preview") {
-            console.log("Preview mode - not saving to localStorage");
+            // console.log("Preview mode - not saving to localStorage");
             return;
         }
 
@@ -132,7 +133,7 @@ function FormProvider({
     // Track changes and reset saved status for edit mode
     React.useEffect(() => {
         if (formMode === "edit" && isInitialized && formSavedStatus) {
-            console.log("Form changed in edit mode - resetting saved status");
+            // console.log("Form changed in edit mode - resetting saved status");
             setFormSavedStatus(false);
         }
     }, [
@@ -169,7 +170,7 @@ function FormProvider({
     // Form Mode
     const getFormMode = () => formMode;
     const setFormModeContext = (mode) => {
-        console.log("Setting form mode to:", mode);
+        // console.log("Setting form mode to:", mode);
         setFormMode(mode);
     };
 
@@ -199,48 +200,13 @@ function FormProvider({
             number: sections.length + 1,
             description: "Section Description",
             questions: [],
+            questions_uid: [],
         };
         setSections((sections) => [...sections, section]);
         // console.log(sections);
     };
 
-    const addQuestionToSection = (questionId, sectionId) => {
-        // If sectionId is empty or "0", remove question from all sections
-        if (!sectionId || sectionId === "" || sectionId === "0") {
-            let updatedSections = sections.map((section) => {
-                section.questions = section.questions.filter(
-                    (qId) => qId !== questionId
-                );
-                return section;
-            });
-            setSections(updatedSections);
-
-            // Remove section_uid from question
-            let updatedQuestions = formQuestions.map((question) => {
-                if (question.question_uid == questionId) {
-                    question.section_uid = "";
-                }
-                return question;
-            });
-            setFormQuestions(updatedQuestions);
-            return;
-        }
-
-        // Assign question to the selected section
-        let updatedSections = sections.map((section) => {
-            // Remove question from all sections first
-            section.questions = section.questions.filter(
-                (qId) => qId !== questionId
-            );
-            // Add to the selected section
-            if (section.section_uid == sectionId) {
-                section.questions.push(questionId);
-            }
-            return section;
-        });
-        setSections(updatedSections);
-
-        // Update question's section_uid
+    const addSectionToQuestion = (questionId, sectionId) => {
         let updatedQuestions = formQuestions.map((question) => {
             if (question.question_uid == questionId) {
                 question.section_uid = sectionId;
@@ -250,10 +216,33 @@ function FormProvider({
         setFormQuestions(updatedQuestions);
     };
 
+    const addQuestionToSection = (questionId, sectionId) => {
+        // If sectionId is empty or "0", remove question from all sections
+        // console.log(questionId);
+        if (sectionId == 0) return;
+
+        let updatedSections = sections.map((section) => {
+            section.questions_uid = section.questions_uid.filter(
+                //removing question to this section
+                (qId) => qId !== questionId
+            );
+
+            if (section.section_uid == sectionId) {
+                section.questions_uid.push(questionId);
+            }
+            // console.log(section.questions_uid);
+
+            return section;
+        });
+        setSections(updatedSections);
+
+        addSectionToQuestion(questionId, sectionId);
+    };
+
     const removeSectionFromQuestion = (sectionId) => {
         let updateQuestions = formQuestions.map((question) => {
-            if (sectionId == question.section) {
-                question.section = "";
+            if (sectionId == question.section_uid) {
+                question.section_uid = "";
             }
             return question;
         });
@@ -361,6 +350,7 @@ function FormProvider({
                     id,
                     name: type,
                     value: `option${q.answer.structure.length + 1}`,
+                    checked: false,
                 });
                 /* if (Array.isArray(q.answer.structure)) {
                 } */
@@ -399,7 +389,7 @@ function FormProvider({
     const removeQuestionChoice = (questionId, choiceId) => {
         // removes a question choice in case of multiple choices or check box.
         let updatedQuestions = formQuestions.map((q) => {
-            if (q.id === questionId) {
+            if (q.question_uid === questionId) {
                 q.answer.structure = q.answer.structure.filter(
                     (c) => c.id !== choiceId
                 );

@@ -65,7 +65,7 @@ function FormContent() {
                             <Button
                                 variant="outline"
                                 size="sm"
-                                className="flex items-center gap-2"
+                                className="p-1 px-2 flex items-center gap-2"
                                 onClick={() => window.history.back()}
                             >
                                 ← Back

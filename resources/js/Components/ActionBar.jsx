@@ -211,11 +211,11 @@ export default function ActionBar({ questionId, toast }) {
 
         const validation = ValidatorForm(form);
         if (!validation.valid) {
-            console.log("Validation failed for form:", form);
+            // console.log("Validation failed for form:", form);
             toast.warning(validation.message);
         } else {
-            console.log("Form is valid, submitting:", form);
-            /* router.post("/save-form", form, {
+            // console.log("Form is valid, submitting:", form);
+            router.post("/save-form", form, {
                 preserveState: true,
                 onSuccess: (r) => {
                     formContext._setFormSavedStatus(true);
@@ -225,7 +225,7 @@ export default function ActionBar({ questionId, toast }) {
                     // console.log(e);
                     toast.error("Failed to save survey. Please try again.");
                 },
-            }); */
+            });
         }
     };
     return (
@@ -244,7 +244,10 @@ export default function ActionBar({ questionId, toast }) {
                     variant="default"
                     size="sm"
                     className="p-1 px-3 bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
-                    onClick={formContext.addSection}
+                    onClick={() => {
+                        formContext.addSection();
+                        // console.log(formContext.getSections());
+                    }}
                 >
                     <TiEqualsOutline className="w-4 h-4" />
                     <span>Add Section</span>
@@ -263,9 +266,43 @@ export default function ActionBar({ questionId, toast }) {
                 <Button
                     variant="outline"
                     size="sm"
-                    className="p-1 px-3 border-blue-500 text-blue-600 hover:bg-blue-50 flex items-center gap-2"
+                    className={`p-1 px-3 flex items-center gap-2 ${
+                        !formContext._formSavedStatus() ||
+                        !formContext._formTitle() ||
+                        formContext.getFormQuestions().length === 0
+                            ? "border-gray-300 text-gray-400 hover:bg-gray-50 cursor-not-allowed"
+                            : "border-blue-500 text-blue-600 hover:bg-blue-50"
+                    }`}
+                    disabled={
+                        !formContext._formSavedStatus() ||
+                        !formContext._formTitle() ||
+                        formContext.getFormQuestions().length === 0
+                    }
                     onClick={(e) => {
                         e.preventDefault();
+
+                        // Check if form can be previewed
+                        if (!formContext._formSavedStatus()) {
+                            toast.warning(
+                                "Please save the form first before previewing"
+                            );
+                            return;
+                        }
+
+                        if (!formContext._formTitle()) {
+                            toast.warning(
+                                "Please add a title to your survey before previewing"
+                            );
+                            return;
+                        }
+
+                        if (formContext.getFormQuestions().length === 0) {
+                            toast.warning(
+                                "Please add at least one question before previewing"
+                            );
+                            return;
+                        }
+
                         const form_uid = formContext.getFormUID();
                         if (!form_uid) {
                             console.error("No form_uid found!");

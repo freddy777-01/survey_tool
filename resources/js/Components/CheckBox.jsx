@@ -104,7 +104,7 @@ export default function CheckBox({
                     <Button
                         variant="outline"
                         size="sm"
-                        className="flex items-center gap-2 border-blue-300 text-blue-600 hover:bg-blue-50 hover:border-blue-400"
+                        className="p-1 px-2 flex items-center gap-2 border-blue-300 text-blue-600 hover:bg-blue-50 hover:border-blue-400"
                         onClick={() =>
                             formContext.addQuestionChoice(
                                 questionId,

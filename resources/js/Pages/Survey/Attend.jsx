@@ -1,32 +1,114 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Layout from "@/Pages/Layout";
 import { Button } from "@/Components/ui/button";
 import { makeApiRequest } from "@/utilities/api";
+import { router } from "@inertiajs/react";
+
+const TextAreaWithFocus = ({
+    question_uid,
+    structure_id,
+    initialValue,
+    onAnswerChange,
+}) => {
+    const [localValue, setLocalValue] = useState(initialValue);
+
+    useEffect(() => {
+        setLocalValue(initialValue);
+    }, [initialValue]);
+
+    const handleChange = (e) => {
+        setLocalValue(e.target.value);
+    };
+
+    const handleBlur = () => {
+        onAnswerChange(question_uid, localValue, structure_id, "written");
+    };
+
+    return (
+        <textarea
+            className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            rows={4}
+            placeholder="Please provide your answer..."
+            value={localValue}
+            onChange={handleChange}
+            onBlur={handleBlur}
+        />
+    );
+};
 
 export default function Attend({ form }) {
     const { main, sections, questions } = form;
     const [answers, setAnswers] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
+    const [showThankYouModal, setShowThankYouModal] = useState(false);
     const [resultQuestion, setResultQuestion] = useState(questions);
 
     // Debug logging
     /* console.log("Attend component loaded with form:", form);
     console.log("Main form data:", main); */
-    console.log("Sections:", sections);
-    console.log("Questions:", questions);
+    // console.log("Sections:", sections);
+    // console.log("Questions:", questions);
 
     useEffect(() => {
         setResultQuestion(questions);
+
+        const answersSlot = {};
+        questions.forEach((q) => {
+            if (Array.isArray(q.answer.structure)) {
+                answersSlot[q.question_uid] = q.answer.structure.map(
+                    (structure) => ({
+                        structureId: structure.id,
+                        name: q.answer.type,
+                        value: "",
+                        checked: false,
+                    })
+                );
+            } else {
+                answersSlot[q.question_uid] = {
+                    structureId: q.answer.structure?.id,
+                    name: q.answer.type,
+                    value: q.answer.structure?.value || "",
+                    checked: q.answer.structure?.checked || false,
+                };
+            }
+        });
+        setAnswers(answersSlot);
+        // console.log("Initialized answers:", answersSlot);
     }, [questions]);
 
-    const setAnswer = (questionId, value) => {
-        /* console.log("Setting answer for question", questionId, "to:", value);
-        console.log("Current answers state:", answers); */
+    const setAnswer = (question_uid, value, structureId, type) => {
         setAnswers((prev) => {
-            const newAnswers = { ...prev, [questionId]: value };
-            // console.log("New answers state:", newAnswers);
-            return newAnswers;
+            if (type === "check_box") {
+                // For checkbox questions, update the specific array element
+                const currentAnswers = prev[question_uid] || [];
+                const updatedAnswers = currentAnswers.map((answer) =>
+                    answer.structureId === structureId
+                        ? { ...answer, checked: !answer.checked, value: value }
+                        : answer
+                );
+                return { ...prev, [question_uid]: updatedAnswers };
+            } else if (type === "multiple_choice") {
+                // For multiple choice questions, set only the selected option to true, others to false
+                const currentAnswers = prev[question_uid] || [];
+                const updatedAnswers = currentAnswers.map((answer) => ({
+                    ...answer,
+                    checked: answer.structureId === structureId,
+                    value: answer.structureId === structureId ? value : "",
+                }));
+                return { ...prev, [question_uid]: updatedAnswers };
+            } else {
+                // For other question types, update the single object
+                return {
+                    ...prev,
+                    [question_uid]: {
+                        structureId: structureId,
+                        name: type,
+                        value: value,
+                        checked: true,
+                    },
+                };
+            }
         });
     };
 
@@ -38,18 +120,50 @@ export default function Attend({ form }) {
     };
 
     const submit = async () => {
-        if (Object.keys(answers).length === 0) {
+        // Check if any questions have been answered
+        const answeredQuestions = Object.keys(answers).filter(
+            (question_uid) => {
+                const answer = answers[question_uid];
+                if (Array.isArray(answer)) {
+                    return answer.some((item) => item.checked);
+                } else {
+                    return answer.value && answer.value.trim() !== "";
+                }
+            }
+        );
+
+        if (answeredQuestions.length === 0) {
             alert("Please answer at least one question before submitting.");
             return;
         }
 
-        console.log("Submitting answers:", answers);
+        // Transform answers to the expected format
+        const transformedAnswers = {};
+        Object.keys(answers).forEach((question_uid) => {
+            const answer = answers[question_uid];
+            if (Array.isArray(answer)) {
+                // For checkbox questions, collect all checked values
+                const checkedValues = answer
+                    .filter((item) => item.checked)
+                    .map((item) => item.value);
+                if (checkedValues.length > 0) {
+                    transformedAnswers[question_uid] = checkedValues;
+                }
+            } else {
+                // For other question types, use the single value if not empty
+                if (answer.value && answer.value.trim() !== "") {
+                    transformedAnswers[question_uid] = answer.value;
+                }
+            }
+        });
+
+        console.log("Submitting answers:", transformedAnswers);
         console.log("Form UID:", main.form_uid);
 
         setIsSubmitting(true);
         const payload = {
             form_uid: main.form_uid,
-            answers,
+            answers: transformedAnswers,
         };
 
         try {
@@ -72,7 +186,7 @@ export default function Attend({ form }) {
                 }
 
                 setSubmitted(true);
-                alert("Thank you for participating in this survey!");
+                setShowThankYouModal(true);
             } else {
                 const errorData = await res.json();
                 console.error("Submission failed:", errorData);
@@ -104,9 +218,10 @@ export default function Attend({ form }) {
                         </p>
                         <Button
                             variant="outline"
-                            onClick={() => window.close()}
+                            onClick={() => router.visit("/")}
+                            className="p-1 px-2 bg-blue-400 hover:bg-blue-500 text-white"
                         >
-                            Close
+                            Back to Dashboard
                         </Button>
                     </div>
                 </div>
@@ -120,9 +235,9 @@ export default function Attend({ form }) {
                 {section.name}
             </h3>
             <div className="space-y-6">
-                {section.questions.map((q) => (
+                {section.questions.map((q, questionIndex) => (
                     <div
-                        key={q.id}
+                        key={q.question_uid}
                         className="border border-gray-200 rounded-lg p-4 bg-gray-50"
                     >
                         <p className="font-medium mb-3 text-gray-800">
@@ -132,33 +247,31 @@ export default function Attend({ form }) {
                         {q.answer?.type === "multiple_choice" &&
                             q.answer?.structure && (
                                 <div className="space-y-2">
-                                    {console.log(
-                                        "Rendering multiple choice for question:",
-                                        q.id
-                                    )}
-                                    {console.log(
-                                        "Answer structure:",
-                                        q.answer.structure
-                                    )}
-                                    {q.answer.structure.map((opt) => (
+                                    {q.answer.structure.map((opt, i) => (
                                         <label
                                             key={opt.id || opt.value}
                                             className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded cursor-pointer"
                                         >
                                             <input
                                                 type="radio"
-                                                name={`q_${q.id}`}
+                                                name={`q_${q.question_uid}`}
                                                 value={opt.value}
+                                                checked={
+                                                    answers[q.question_uid]?.[i]
+                                                        ?.checked || false
+                                                }
                                                 onChange={(e) => {
                                                     setAnswer(
-                                                        q.id,
-                                                        e.target.value
+                                                        q.question_uid,
+                                                        e.target.value,
+                                                        opt.id,
+                                                        "multiple_choice"
                                                     );
                                                 }}
                                                 className="w-4 h-4 text-blue-600"
                                             />
                                             <span className="text-gray-700">
-                                                {opt.name}
+                                                {opt.value}
                                             </span>
                                         </label>
                                     ))}
@@ -167,15 +280,7 @@ export default function Attend({ form }) {
                         {q.answer?.type === "check_box" &&
                             q.answer?.structure && (
                                 <div className="space-y-2">
-                                    {console.log(
-                                        "Rendering checkbox for question:",
-                                        q.id
-                                    )}
-                                    {console.log(
-                                        "Answer structure:",
-                                        q.answer.structure
-                                    )}
-                                    {q.answer.structure.map((opt) => (
+                                    {q.answer.structure.map((opt, i) => (
                                         <label
                                             key={opt.id || opt.value}
                                             className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded cursor-pointer"
@@ -183,33 +288,17 @@ export default function Attend({ form }) {
                                             <input
                                                 type="checkbox"
                                                 value={opt.value}
+                                                checked={
+                                                    answers[q.question_uid]?.[i]
+                                                        ?.checked || false
+                                                }
                                                 onChange={(e) => {
-                                                    /* console.log(
-                                                        "Checkbox clicked:",
-                                                        e.target.value,
-                                                        "checked:",
-                                                        e.target.checked
-                                                    ); */
-                                                    const current =
-                                                        Array.isArray(
-                                                            answers[q.id]
-                                                        )
-                                                            ? answers[q.id]
-                                                            : [];
-                                                    if (e.target.checked)
-                                                        setAnswer(q.id, [
-                                                            ...current,
-                                                            opt.value,
-                                                        ]);
-                                                    else
-                                                        setAnswer(
-                                                            q.id,
-                                                            current.filter(
-                                                                (v) =>
-                                                                    v !==
-                                                                    opt.value
-                                                            )
-                                                        );
+                                                    setAnswer(
+                                                        q.question_uid,
+                                                        opt.value,
+                                                        opt.id,
+                                                        "check_box"
+                                                    );
                                                 }}
                                                 className="w-4 h-4 text-blue-600"
                                             />
@@ -221,32 +310,37 @@ export default function Attend({ form }) {
                                 </div>
                             )}
                         {q.answer?.type === "written" && (
-                            <textarea
-                                className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                rows={4}
-                                placeholder="Please provide your answer..."
-                                onChange={(e) =>
-                                    setAnswer(q.id, e.target.value)
+                            <TextAreaWithFocus
+                                question_uid={q.question_uid}
+                                structure_id={q.answer.structure.id}
+                                initialValue={
+                                    answers[q.question_uid]?.value || ""
                                 }
+                                onAnswerChange={setAnswer}
                             />
                         )}
                         {q.answer?.type === "yes_no" && (
                             <div className="flex gap-6">
-                                {["Yes", "No"].map((opt) => (
+                                {["Yes", "No"].map((opt, i) => (
                                     <label
                                         key={opt}
                                         className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded cursor-pointer"
                                     >
                                         <input
                                             type="radio"
-                                            name={`q_${q.id}`}
+                                            name={`q_${q.question_uid}`}
                                             value={opt}
+                                            checked={
+                                                answers[q.question_uid]
+                                                    ?.value === opt
+                                            }
                                             onChange={(e) => {
-                                                /* console.log(
-                                                    "Yes/No radio clicked:",
-                                                    e.target.value
-                                                ); */
-                                                setAnswer(q.id, e.target.value);
+                                                setAnswer(
+                                                    q.question_uid,
+                                                    e.target.value,
+                                                    null,
+                                                    "yes_no"
+                                                );
                                             }}
                                             className="w-4 h-4 text-blue-600"
                                         />
@@ -263,7 +357,7 @@ export default function Attend({ form }) {
                                     Error: This question has no answer structure
                                     defined.
                                 </p>
-                                <p>Question ID: {q.id}</p>
+                                <p>Question ID: {q.question_uid}</p>
                                 <p>Answer: {JSON.stringify(q.answer)}</p>
 
                                 {/* Fallback input for questions without structure */}
@@ -276,11 +370,12 @@ export default function Attend({ form }) {
                                         rows={3}
                                         placeholder="Please provide your answer..."
                                         onChange={(e) => {
-                                            /* console.log(
-                                                "Fallback textarea changed:",
-                                                e.target.value
-                                            ); */
-                                            setAnswer(q.id, e.target.value);
+                                            setAnswer(
+                                                q.question_uid,
+                                                e.target.value,
+                                                null,
+                                                "written"
+                                            );
                                         }}
                                     />
                                 </div>
@@ -313,25 +408,31 @@ export default function Attend({ form }) {
                 {question.answer?.type === "multiple_choice" &&
                     question.answer?.structure && (
                         <div className="space-y-2">
-                            {question.answer.structure.map((opt) => (
+                            {question.answer.structure.map((opt, i) => (
                                 <label
                                     key={opt.id || opt.value}
                                     className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded cursor-pointer"
                                 >
                                     <input
                                         type="radio"
-                                        name={`q_${question.id}`}
+                                        name={`q_${question.question_uid}`}
                                         value={opt.value}
+                                        checked={
+                                            answers[question.question_uid]?.[i]
+                                                ?.checked || false
+                                        }
                                         onChange={(e) => {
                                             setAnswer(
-                                                question.id,
-                                                e.target.value
+                                                question.question_uid,
+                                                e.target.value,
+                                                opt.id,
+                                                "multiple_choice"
                                             );
                                         }}
                                         className="w-4 h-4 text-blue-600"
                                     />
                                     <span className="text-gray-700">
-                                        {opt.name}
+                                        {opt.value}
                                     </span>
                                 </label>
                             ))}
@@ -340,7 +441,7 @@ export default function Attend({ form }) {
                 {question.answer?.type === "check_box" &&
                     question.answer?.structure && (
                         <div className="space-y-2">
-                            {question.answer.structure.map((opt) => (
+                            {question.answer.structure.map((opt, i) => (
                                 <label
                                     key={opt.id || opt.value}
                                     className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded cursor-pointer"
@@ -348,24 +449,17 @@ export default function Attend({ form }) {
                                     <input
                                         type="checkbox"
                                         value={opt.value}
+                                        checked={
+                                            answers[question.question_uid]?.[i]
+                                                ?.checked || false
+                                        }
                                         onChange={(e) => {
-                                            const current = Array.isArray(
-                                                answers[question.id]
-                                            )
-                                                ? answers[question.id]
-                                                : [];
-                                            if (e.target.checked)
-                                                setAnswer(question.id, [
-                                                    ...current,
-                                                    opt.value,
-                                                ]);
-                                            else
-                                                setAnswer(
-                                                    question.id,
-                                                    current.filter(
-                                                        (v) => v !== opt.value
-                                                    )
-                                                );
+                                            setAnswer(
+                                                question.question_uid,
+                                                opt.value,
+                                                opt.id,
+                                                "check_box"
+                                            );
                                         }}
                                         className="w-4 h-4 text-blue-600"
                                     />
@@ -377,11 +471,13 @@ export default function Attend({ form }) {
                         </div>
                     )}
                 {question.answer?.type === "written" && (
-                    <textarea
-                        className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        rows={4}
-                        placeholder="Please provide your answer..."
-                        onChange={(e) => setAnswer(question.id, e.target.value)}
+                    <TextAreaWithFocus
+                        question_uid={question.question_uid}
+                        structure_id={question.answer.structure.id}
+                        initialValue={
+                            answers[question.question_uid]?.value || ""
+                        }
+                        onAnswerChange={setAnswer}
                     />
                 )}
                 {question.answer?.type === "yes_no" && (
@@ -434,46 +530,107 @@ export default function Attend({ form }) {
     };
 
     return (
-        <Layout>
-            <div className="max-w-4xl mx-auto border w-[90%]">
-                <div className="mb-8 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200">
-                    <h2 className="text-3xl font-bold text-gray-800 mb-2">
-                        {main.name}
-                    </h2>
-                    <p className="text-gray-600 text-lg">{main.description}</p>
-                </div>
-
-                {sections.length > 0 ? (
-                    sections.map((section) => (
-                        <SectionBlock key={section.id} section={section} />
-                    ))
-                ) : (
-                    <div className="space-y-4">
-                        {questions.map((question) => (
-                            <QuestionBlock
-                                key={question.id}
-                                question={question}
-                            />
-                        ))}
+        <>
+            {/* Thank You Modal */}
+            {showThankYouModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-8 max-w-md mx-4 text-center">
+                        <div className="mb-6">
+                            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                                <svg
+                                    className="h-6 w-6 text-green-600"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth="2"
+                                        d="M5 13l4 4L19 7"
+                                    ></path>
+                                </svg>
+                            </div>
+                            <h3 className="text-lg font-medium text-gray-900 mb-2">
+                                Thank You!
+                            </h3>
+                            <p className="text-sm text-gray-500">
+                                Your response has been submitted successfully.
+                                We appreciate your participation.
+                            </p>
+                        </div>
+                        <div className="flex gap-3 justify-center">
+                            <Button
+                                variant="outline"
+                                onClick={() => router.visit("/")}
+                            >
+                                Back to Dashboard
+                            </Button>
+                            <Button onClick={() => setShowThankYouModal(false)}>
+                                Close
+                            </Button>
+                        </div>
                     </div>
-                )}
-
-                <div className="flex justify-between items-center mt-8 p-4 bg-gray-50 rounded-lg border">
-                    <div className="text-sm text-gray-600">
-                        {Object.keys(answers).length} of {questions.length}{" "}
-                        questions answered
-                    </div>
-                    <Button
-                        variant="default"
-                        size="lg"
-                        className="px-8 py-3 text-lg bg-green-600 hover:bg-green-700 text-white"
-                        onClick={submit}
-                        disabled={isSubmitting}
-                    >
-                        {isSubmitting ? "Submitting..." : "Submit Survey"}
-                    </Button>
                 </div>
-            </div>
-        </Layout>
+            )}
+
+            <Layout>
+                <div className="max-w-4xl mx-auto w-[90%]">
+                    <div className="mb-8 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200">
+                        <h2 className="text-3xl font-bold text-gray-800 mb-2">
+                            {main.name}
+                        </h2>
+                        <p className="text-gray-600 text-lg">
+                            {main.description}
+                        </p>
+                    </div>
+
+                    {sections.length > 0 ? (
+                        sections.map((section) => (
+                            <SectionBlock key={section.id} section={section} />
+                        ))
+                    ) : (
+                        <div className="space-y-4">
+                            {questions.map((question) => (
+                                <QuestionBlock
+                                    key={question.question_uid}
+                                    question={question}
+                                />
+                            ))}
+                        </div>
+                    )}
+
+                    <div className="flex justify-between items-center mt-8 p-4 bg-gray-50 rounded-lg border">
+                        <div className="text-sm text-gray-600">
+                            {
+                                Object.keys(answers).filter((question_uid) => {
+                                    const answer = answers[question_uid];
+                                    if (Array.isArray(answer)) {
+                                        return answer.some(
+                                            (item) => item.checked
+                                        );
+                                    } else {
+                                        return (
+                                            answer.value &&
+                                            answer.value.trim() !== ""
+                                        );
+                                    }
+                                }).length
+                            }{" "}
+                            of {questions.length} questions answered
+                        </div>
+                        <Button
+                            variant="default"
+                            size="lg"
+                            className="px-8 py-3 text-lg bg-green-600 hover:bg-green-700 text-white"
+                            onClick={submit}
+                            disabled={isSubmitting}
+                        >
+                            {isSubmitting ? "Submitting..." : "Submit Survey"}
+                        </Button>
+                    </div>
+                </div>
+            </Layout>
+        </>
     );
 }

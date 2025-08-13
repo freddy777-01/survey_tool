@@ -76,12 +76,8 @@ export function ValidatorForm(form) {
         let questionsInEitherSections = [];
         let sectionsWithNoQuestions = [];
 
-        /* console.log("=== VALIDATION DEBUG ===");
-        console.log("Form sections:", form.sections);
-        console.log("Form questions:", form.questions); */
-
         // Collect all question IDs that are assigned to sections
-        form.sections.forEach((section) => {
+        for (const section of form.sections) {
             if (!section.name || section.name.trim() === "") {
                 return {
                     valid: false,
@@ -89,47 +85,23 @@ export function ValidatorForm(form) {
                 };
             }
 
-            /* console.log(
-                `Section ${section.name} (${section.section_uid}) has questions:`,
-                section.questions
-            ); */
-
-            // Add all question IDs from this section
-            if (section.questions && Array.isArray(section.questions)) {
-                section.questions.forEach((questionId) => {
-                    questionsInEitherSections.push(questionId);
-                });
+            // Add all question UIDs from either sections
+            for (const question_uid of section.questions_uid) {
+                questionsInEitherSections.push(question_uid);
             }
 
             // Check if section has no questions
-            if (!section.questions || section.questions.length === 0) {
+            if (!section.questions_uid || section.questions_uid.length === 0) {
                 sectionsWithNoQuestions.push(section.section_uid);
             }
-        });
-
-        /* console.log(
-            "Questions assigned to sections:",
-            questionsInEitherSections
-        ); */
+        }
 
         // Check which questions are not assigned to any section
-        form.questions.forEach((question) => {
-            const questionId = question.question_uid || question.id;
-            /* console.log(
-                `Checking question ${questionId} (${question.question})`
-            ); */
-            if (!questionsInEitherSections.includes(questionId)) {
-                questionsNotInSections.push(questionId);
-                /* console.log(
-                    `Question ${questionId} is NOT assigned to any section`
-                ); */
-            } else {
-                // console.log(`Question ${questionId} IS assigned to a section`);
-            }
+        form.questions.forEach((q) => {
+            if (questionsInEitherSections.length > 0)
+                if (!questionsInEitherSections.includes(q.question_uid))
+                    questionsNotInSections.push(q.question_uid);
         });
-
-        /* console.log("Questions not in sections:", questionsNotInSections);
-        console.log("=== END VALIDATION DEBUG ==="); */
 
         // Return validation result
         if (questionsNotInSections.length > 0) {

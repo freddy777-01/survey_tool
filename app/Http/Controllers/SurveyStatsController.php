@@ -66,7 +66,7 @@ class SurveyStatsController extends Controller
             'answers' => 'required|array',
         ]);
 
-        $form = Form::where('form_uid', $validated['form_uid'])->firstOrFail();
+        $form = Form::where('form_uid', $validated['form_uid'])->firstOrFail(['id', 'form_uid', 'published', 'status', 'begin_date', 'end_date']);
 
         // Check if survey is published and active
         if (!$form->published || $form->status !== 'active') {
@@ -82,19 +82,48 @@ class SurveyStatsController extends Controller
             return response()->json(['message' => 'This survey is not currently active.'], 403);
         }
 
-        $response = Response::create([
+        $response = \App\Models\Response::create([
             'form_id' => $form->id,
-            'user_id' => auth()->id(), // This will be null for anonymous users
+            'user_id' => \Illuminate\Support\Facades\Auth::check() ? \Illuminate\Support\Facades\Auth::id() : null, // This will be null for anonymous users
             'session_id' => $request->session()->getId(),
             'ip_address' => $request->ip(),
         ]);
 
-        foreach ($validated['answers'] as $questionId => $value) {
-            \App\Models\ResponseAnswer::create([
-                'response_id' => $response->id,
-                'question_id' => $questionId,
-                'value' => is_array($value) ? $value : (string)$value,
-            ]);
+        // Get all questions for this form to map question_uid to question_id
+        $questions = Question::where('form_id', $form->id)->get(['id', 'question_uid', 'section_id']);
+        $questionMap = $questions->pluck('id', 'question_uid')->toArray();
+
+        // Log for debugging
+        \Illuminate\Support\Facades\Log::info('Survey submission', [
+            'form_uid' => $validated['form_uid'],
+            'total_questions' => $questions->count(),
+            'answers_received' => count($validated['answers']),
+            'question_map' => $questionMap,
+            'answers' => $validated['answers']
+        ]);
+
+        foreach ($validated['answers'] as $questionUid => $value) {
+            // Map question_uid to question_id
+            $questionId = $questionMap[$questionUid] ?? null;
+
+            if ($questionId) {
+                \App\Models\ResponseAnswer::create([
+                    'response_id' => $response->id,
+                    'question_id' => $questionId,
+                    'value' => is_array($value) ? $value : (string)$value,
+                ]);
+
+                \Illuminate\Support\Facades\Log::info('Answer saved', [
+                    'question_uid' => $questionUid,
+                    'question_id' => $questionId,
+                    'value' => $value
+                ]);
+            } else {
+                \Illuminate\Support\Facades\Log::warning('Question not found', [
+                    'question_uid' => $questionUid,
+                    'available_questions' => array_keys($questionMap)
+                ]);
+            }
         }
 
         return response()->json(['message' => 'Response submitted successfully']);

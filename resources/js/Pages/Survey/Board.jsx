@@ -291,7 +291,7 @@ export default function Board({ form, participants: initialParticipants = 0 }) {
                             <Button
                                 variant="outline"
                                 size="sm"
-                                className="flex items-center gap-2"
+                                className="p-1 px-2 flex items-center gap-2"
                                 onClick={() => {
                                     router.get(
                                         "/survey/edit",
@@ -307,7 +307,7 @@ export default function Board({ form, participants: initialParticipants = 0 }) {
                             <Button
                                 variant="outline"
                                 size="sm"
-                                className="flex items-center gap-2"
+                                className="p-1 px-2 flex items-center gap-2"
                                 onClick={() => {
                                     const url = `/preview?form_uid=${form.form_uid}`;
                                     window.open(url, "_blank");
@@ -320,7 +320,7 @@ export default function Board({ form, participants: initialParticipants = 0 }) {
                             <Button
                                 variant="outline"
                                 size="sm"
-                                className="flex items-center gap-2"
+                                className="p-1 px-2 flex items-center gap-2"
                                 onClick={() => {
                                     router.get(
                                         "/survey/attend",
@@ -337,7 +337,7 @@ export default function Board({ form, participants: initialParticipants = 0 }) {
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    className="flex items-center gap-2 text-red-600 border-red-200 hover:bg-red-50"
+                                    className="p-1 px-2 flex items-center gap-2 text-red-600 border-red-200 hover:bg-red-50"
                                     onClick={handleUnpublish}
                                     disabled={isLoading}
                                 >
@@ -350,7 +350,7 @@ export default function Board({ form, participants: initialParticipants = 0 }) {
                                 <Button
                                     variant="default"
                                     size="sm"
-                                    className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+                                    className="p-1 px-2 flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
                                     onClick={handlePublish}
                                     disabled={isLoading}
                                 >
@@ -371,7 +371,7 @@ export default function Board({ form, participants: initialParticipants = 0 }) {
                         <Button
                             variant="outline"
                             size="sm"
-                            className="flex items-center gap-2"
+                            className="p-1 px-2 flex items-center gap-2"
                         >
                             <FiDownload className="w-4 h-4" />
                             Export Data

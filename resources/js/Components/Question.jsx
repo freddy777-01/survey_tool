@@ -22,18 +22,21 @@ export default function Question({
     const [selectedSection, setSelectedSection] =
         React.useState(defaultSection);
 
+    // console.log(defaultSection);
+
     useEffect(() => {
         // If defaultSection is provided (from edit page), use it
-        if (defaultSection && defaultSection.id) {
+        if (defaultSection && defaultSection.section_uid) {
             setSelectedSection(defaultSection);
             return;
         }
 
         // Otherwise, find the section from formContext (for create mode)
         let _selectedSection = formContext.getSections().find((section) => {
-            return section.questions.includes(questionId);
+            return section.questions_uid.includes(questionId);
         });
-        setSelectedSection(_selectedSection ? _selectedSection : "");
+        setSelectedSection(_selectedSection);
+        console.log(selectedSection);
     }, [formContext.getSections(), defaultSection, questionId]);
 
     return (
@@ -56,11 +59,7 @@ export default function Question({
                                         e.target.value
                                     )
                                 }
-                                value={
-                                    selectedSection?.section_uid ||
-                                    selectedSection?.id ||
-                                    ""
-                                }
+                                defaultValue={selectedSection?.section_uid}
                             >
                                 <option value="">Assign Section</option>
                                 {formContext.getSections().map((section) => (

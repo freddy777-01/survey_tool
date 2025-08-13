@@ -1,5 +1,6 @@
 import React from "react";
 import { FormContext } from "@/utilities/FormProvider";
+import moment from "moment";
 
 export default function Written({
     questionId,
@@ -11,7 +12,11 @@ export default function Written({
     const [answer, setAnswer] = React.useState("");
 
     React.useEffect(() => {
-        formContext.changeAnswerStructure(questionId, choice, structure);
+        formContext.changeAnswerStructure(questionId, choice, {
+            id: moment().valueOf(),
+            name: "written",
+            value: "",
+        });
     }, [choice]);
     return (
         <div>

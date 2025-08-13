@@ -147,7 +147,7 @@ function welcome({ forms }) {
                     </div>
                     <Button
                         onClick={() => router.get("/survey/create")}
-                        className="bg-white text-blue-600 hover:bg-blue-50 px-6 py-3 rounded-lg font-semibold flex items-center gap-2"
+                        className="ml-5 bg-blue-300 text-blue-600 hover:bg-blue-400 px-6 py-3 rounded-lg font-semibold flex items-center gap-2"
                     >
                         <FiPlus className="w-5 h-5" />
                         Create Survey
@@ -237,7 +237,7 @@ function welcome({ forms }) {
                             }
                             size="sm"
                             onClick={() => setViewMode("grid")}
-                            className="flex items-center gap-2"
+                            className="p-1 px-2 flex items-center gap-2"
                         >
                             <FiGrid className="w-4 h-4" />
                             Grid
@@ -248,7 +248,7 @@ function welcome({ forms }) {
                             }
                             size="sm"
                             onClick={() => setViewMode("list")}
-                            className="flex items-center gap-2"
+                            className="p-1 px-2 flex items-center gap-2"
                         >
                             <FiList className="w-4 h-4" />
                             List
@@ -336,7 +336,7 @@ function welcome({ forms }) {
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            className="flex items-center gap-1"
+                                            className="p-1 px-2 bg-blue-400 hover:bg-blue-500 text-white flex items-center gap-1"
                                             onClick={() => {
                                                 router.get(
                                                     "/survey/board",
@@ -346,13 +346,13 @@ function welcome({ forms }) {
                                             }}
                                         >
                                             <FiBarChart2 className="w-4 h-4" />
-                                            Statistics
+                                            Open
                                         </Button>
 
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            className="flex items-center gap-1"
+                                            className="p-1 px-2 flex items-center gap-1 bg-blue-400 hover:bg-blue-500 text-white"
                                             onClick={() => {
                                                 const url = `/preview?form_uid=${form.form_uid}`;
                                                 window.open(url, "_blank");
@@ -365,7 +365,7 @@ function welcome({ forms }) {
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            className="flex items-center gap-1"
+                                            className="p-1 px-2 bg-blue-400 hover:bg-blue-500 text-white flex items-center gap-1"
                                             onClick={() => {
                                                 handleAttendClick(form);
                                             }}
@@ -378,7 +378,7 @@ function welcome({ forms }) {
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                className="flex items-center gap-1 text-red-600 border-red-200 hover:bg-red-50"
+                                                className="p-1 px-2 flex items-center gap-1 text-red-600 border-red-200 hover:bg-red-50"
                                                 onClick={async () => {
                                                     if (
                                                         confirm(
@@ -424,7 +424,7 @@ function welcome({ forms }) {
                                             <Button
                                                 variant="default"
                                                 size="sm"
-                                                className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white"
+                                                className="p-1 px-2 flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white"
                                                 onClick={async () => {
                                                     try {
                                                         const response =

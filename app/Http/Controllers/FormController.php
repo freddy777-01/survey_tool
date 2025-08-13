@@ -361,6 +361,9 @@ class FormController extends Controller
                 $section['questions'] = $questions->filter(function ($question) use ($section) {
                     return $question['section_id'] == $section['id'];
                 })->values();
+                $section['questions_uid'] = $questions->filter(function ($question) use ($section) {
+                    return $question['section_id'] == $section['id'];
+                })->pluck('question_uid')->toArray();
                 return $section;
             });
         } else {

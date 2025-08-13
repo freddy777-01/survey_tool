@@ -40,22 +40,29 @@ function EditContent({ form }) {
     };
 
     const sectionMapping = (sectionUID) => {
+        // console.log(sectionUID);
         if (form.sections.length > 0) {
             let s = {
                 id: "",
+                section_uid: "",
                 name: "",
                 number: "",
                 description: "Section Description",
                 questions: [],
+                questions_uid: [],
             };
             form.sections.forEach((section, index) => {
-                if (sectionUID == section.section_uid) {
-                    s.id = sectionUID;
+                if (section.section_uid == sectionUID) {
+                    s.id = section.id;
+                    s.section_uid = sectionUID;
                     s.name = section.name;
                     s.questions = section.questions;
                     s.number = index + 1;
+                    s.questions_uid = section.questions_uid;
                 }
             });
+            // console.log(s);
+
             return s;
         }
         return {};
@@ -196,7 +203,7 @@ function EditContent({ form }) {
                                     onClick={formContext.addFormQuestion}
                                     variant="default"
                                     size="sm"
-                                    className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
+                                    className="p-1 px-3 bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
                                 >
                                     <FiPlus className="w-4 h-4" />
                                     Add Question
@@ -231,7 +238,7 @@ function EditContent({ form }) {
                                         onClick={formContext.addFormQuestion}
                                         variant="default"
                                         size="lg"
-                                        className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2 mx-auto"
+                                        className="p-1 px-3 bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2 mx-auto"
                                     >
                                         <FiPlus className="w-5 h-5" />
                                         Add Your First Question

@@ -55,7 +55,31 @@ export default function Attend({ form }) {
 
         const answersSlot = {};
         questions.forEach((q) => {
-            if (Array.isArray(q.answer.structure)) {
+            if (q.answer.type === "likert_scale") {
+                // Check if it's table format (has statements and options) or simple format
+                if (
+                    q.answer.structure &&
+                    q.answer.structure.statements &&
+                    q.answer.structure.options
+                ) {
+                    // Table likert scale - initialize with empty object
+                    answersSlot[q.question_uid] = {
+                        name: q.answer.type,
+                    };
+                } else if (Array.isArray(q.answer.structure)) {
+                    // Simple likert scale - initialize with empty object
+                    answersSlot[q.question_uid] = {
+                        name: q.answer.type,
+                        value: "",
+                    };
+                } else {
+                    // Fallback for simple likert scale
+                    answersSlot[q.question_uid] = {
+                        name: q.answer.type,
+                        value: "",
+                    };
+                }
+            } else if (Array.isArray(q.answer.structure)) {
                 answersSlot[q.question_uid] = q.answer.structure.map(
                     (structure) => ({
                         structureId: structure.id,
@@ -97,6 +121,31 @@ export default function Attend({ form }) {
                     value: answer.structureId === structureId ? value : "",
                 }));
                 return { ...prev, [question_uid]: updatedAnswers };
+            } else if (type === "likert_scale") {
+                // For likert scale questions, check if it's table or simple format
+                const currentAnswers = prev[question_uid] || {};
+
+                // If structureId is a statement ID (table format), store per statement
+                if (structureId && structureId.toString().length > 10) {
+                    // Likely a timestamp ID
+                    return {
+                        ...prev,
+                        [question_uid]: {
+                            ...currentAnswers,
+                            [structureId]: value, // structureId is the statement ID
+                            name: type,
+                        },
+                    };
+                } else {
+                    // Simple likert scale - single value
+                    return {
+                        ...prev,
+                        [question_uid]: {
+                            value: value,
+                            name: type,
+                        },
+                    };
+                }
             } else {
                 // For other question types, update the single object
                 return {
@@ -126,6 +175,16 @@ export default function Attend({ form }) {
                 const answer = answers[question_uid];
                 if (Array.isArray(answer)) {
                     return answer.some((item) => item.checked);
+                } else if (answer.name === "likert_scale") {
+                    // For likert scale, check if it has any answers
+                    if (answer.value) {
+                        return true; // Simple likert scale has a value
+                    } else {
+                        // Table likert scale - check if any statements are answered
+                        return Object.keys(answer).some(
+                            (key) => key !== "name" && answer[key]
+                        );
+                    }
                 } else {
                     return answer.value && answer.value.trim() !== "";
                 }
@@ -148,6 +207,23 @@ export default function Attend({ form }) {
                     .map((item) => item.value);
                 if (checkedValues.length > 0) {
                     transformedAnswers[question_uid] = checkedValues;
+                }
+            } else if (answer.name === "likert_scale") {
+                // For likert scale questions, check if it's table or simple format
+                if (answer.value) {
+                    // Simple likert scale - single value
+                    transformedAnswers[question_uid] = answer.value;
+                } else {
+                    // Table likert scale - collect all statement answers
+                    const statementAnswers = {};
+                    Object.keys(answer).forEach((key) => {
+                        if (key !== "name" && answer[key]) {
+                            statementAnswers[key] = answer[key];
+                        }
+                    });
+                    if (Object.keys(statementAnswers).length > 0) {
+                        transformedAnswers[question_uid] = statementAnswers;
+                    }
                 }
             } else {
                 // For other question types, use the single value if not empty
@@ -501,6 +577,111 @@ export default function Attend({ form }) {
                         ))}
                     </div>
                 )}
+                {question.answer?.type === "likert_scale" &&
+                    question.answer.structure && (
+                        <>
+                            {/* Table Likert Scale */}
+                            {question.answer.structure.statements &&
+                                question.answer.structure.options && (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full border border-gray-300">
+                                            <thead>
+                                                <tr className="bg-gray-50">
+                                                    <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
+                                                        Statement
+                                                    </th>
+                                                    {question.answer.structure.options.map(
+                                                        (option) => (
+                                                            <th
+                                                                key={option.id}
+                                                                className="border border-gray-300 px-3 py-2 text-center text-sm font-medium text-gray-700"
+                                                            >
+                                                                {option.value}
+                                                            </th>
+                                                        )
+                                                    )}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {question.answer.structure.statements.map(
+                                                    (statement, index) => (
+                                                        <tr key={statement.id}>
+                                                            <td className="border border-gray-300 px-3 py-2 text-sm">
+                                                                {index + 1}.{" "}
+                                                                {statement.text}
+                                                            </td>
+                                                            {question.answer.structure.options.map(
+                                                                (option) => (
+                                                                    <td
+                                                                        key={
+                                                                            option.id
+                                                                        }
+                                                                        className="border border-gray-300 px-3 py-2 text-center"
+                                                                    >
+                                                                        <input
+                                                                            type="radio"
+                                                                            name={`statement_${statement.id}`}
+                                                                            value={
+                                                                                option.value
+                                                                            }
+                                                                            onChange={(
+                                                                                e
+                                                                            ) => {
+                                                                                setAnswer(
+                                                                                    question.question_uid,
+                                                                                    e
+                                                                                        .target
+                                                                                        .value,
+                                                                                    statement.id,
+                                                                                    "likert_scale"
+                                                                                );
+                                                                            }}
+                                                                            className="cursor-pointer h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                                                                        />
+                                                                    </td>
+                                                                )
+                                                            )}
+                                                        </tr>
+                                                    )
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+
+                            {/* Simple Likert Scale */}
+                            {Array.isArray(question.answer.structure) && (
+                                <div className="flex flex-row gap-x-5 items-center p-2 text-sm">
+                                    {question.answer.structure.map(
+                                        (scale, index) => (
+                                            <div
+                                                className="flex gap-x-1.5"
+                                                key={index}
+                                            >
+                                                <input
+                                                    type="radio"
+                                                    value={scale.value}
+                                                    name={`q_${question.question_uid}`}
+                                                    onChange={(e) => {
+                                                        setAnswer(
+                                                            question.question_uid,
+                                                            e.target.value,
+                                                            scale.id,
+                                                            "likert_scale"
+                                                        );
+                                                    }}
+                                                    className="cursor-pointer h-5 w-5 border focus:outline-none border-slate-300 transition-all checked:bg-blue-300 focus:ring-1 rounded-md p-1.5"
+                                                />
+                                                <label className="hover:cursor-pointer">
+                                                    {scale.value}
+                                                </label>
+                                            </div>
+                                        )
+                                    )}
+                                </div>
+                            )}
+                        </>
+                    )}
                 {(!question.answer || !question.answer.type) && (
                     <div className="p-3 bg-red-100 border border-red-300 rounded text-red-700">
                         <p>
@@ -609,6 +790,18 @@ export default function Attend({ form }) {
                                         return answer.some(
                                             (item) => item.checked
                                         );
+                                    } else if (answer.name === "likert_scale") {
+                                        // For likert scale, check if it has any answers
+                                        if (answer.value) {
+                                            return true; // Simple likert scale has a value
+                                        } else {
+                                            // Table likert scale - check if any statements are answered
+                                            return Object.keys(answer).some(
+                                                (key) =>
+                                                    key !== "name" &&
+                                                    answer[key]
+                                            );
+                                        }
                                     } else {
                                         return (
                                             answer.value &&

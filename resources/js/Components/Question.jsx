@@ -5,7 +5,8 @@ import Written from "./Written";
 import { ImBin2 } from "react-icons/im";
 import { FormContext } from "@/utilities/FormProvider";
 import YesNo from "./YesNo";
-import LikertScale from "./LikertScale";
+import SimpleLikertScale from "./SimpleLikertScale";
+import TableLikertScale from "./TableLikertScale";
 import { LuPencilLine } from "react-icons/lu";
 import { Button } from "@/Components/ui/button";
 
@@ -19,8 +20,10 @@ export default function Question({
     const formContext = useContext(FormContext);
     const [choice, setChoice] = React.useState(questionChoice);
     const [addDescription, setAddDescription] = React.useState(false);
-    const [selectedSection, setSelectedSection] =
-        React.useState(defaultSection);
+    const [selectedSection, setSelectedSection] = React.useState(
+        defaultSection && defaultSection.section_uid ? defaultSection : null
+    );
+    const [likertType, setLikertType] = React.useState("simple"); // "simple" or "table"
 
     // console.log(defaultSection);
 
@@ -33,10 +36,12 @@ export default function Question({
 
         // Otherwise, find the section from formContext (for create mode)
         let _selectedSection = formContext.getSections().find((section) => {
-            return section.questions_uid.includes(questionId);
+            return (
+                section.questions_uid &&
+                section.questions_uid.includes(questionId)
+            );
         });
-        setSelectedSection(_selectedSection);
-        console.log(selectedSection);
+        setSelectedSection(_selectedSection || null);
     }, [formContext.getSections(), defaultSection, questionId]);
 
     return (
@@ -59,7 +64,9 @@ export default function Question({
                                         e.target.value
                                     )
                                 }
-                                defaultValue={selectedSection?.section_uid}
+                                defaultValue={
+                                    selectedSection?.section_uid || ""
+                                }
                             >
                                 <option value="">Assign Section</option>
                                 {formContext.getSections().map((section) => (
@@ -180,12 +187,66 @@ export default function Question({
                     />
                 )}
                 {choice === "likert_scale" && (
-                    <LikertScale
-                        key={useId()}
-                        questionId={questionId}
-                        choice={choice}
-                        formMode={formMode}
-                    />
+                    <div className="space-y-4">
+                        {(formMode == "create" || formMode == "edit") && (
+                            <div className="border border-gray-200 rounded-lg p-3">
+                                <h4 className="font-medium text-gray-900 mb-3">
+                                    Likert Scale Type
+                                </h4>
+                                <div className="flex gap-4">
+                                    <label className="flex items-center gap-2">
+                                        <input
+                                            type="radio"
+                                            name={`likert_type_${questionId}`}
+                                            value="simple"
+                                            checked={likertType === "simple"}
+                                            onChange={(e) =>
+                                                setLikertType(e.target.value)
+                                            }
+                                            className="w-4 h-4 text-blue-600"
+                                        />
+                                        <span className="text-sm">
+                                            Simple Likert Scale
+                                        </span>
+                                    </label>
+                                    <label className="flex items-center gap-2">
+                                        <input
+                                            type="radio"
+                                            name={`likert_type_${questionId}`}
+                                            value="table"
+                                            checked={likertType === "table"}
+                                            onChange={(e) =>
+                                                setLikertType(e.target.value)
+                                            }
+                                            className="w-4 h-4 text-blue-600"
+                                        />
+                                        <span className="text-sm">
+                                            Table Likert Scale (Multiple
+                                            Statements)
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+                        )}
+
+                        {likertType === "simple" && (
+                            <SimpleLikertScale
+                                key={`simple-${useId()}`}
+                                questionId={questionId}
+                                choice={choice}
+                                formMode={formMode}
+                            />
+                        )}
+
+                        {likertType === "table" && (
+                            <TableLikertScale
+                                key={`table-${useId()}`}
+                                questionId={questionId}
+                                choice={choice}
+                                formMode={formMode}
+                            />
+                        )}
+                    </div>
                 )}
             </div>
         </li>

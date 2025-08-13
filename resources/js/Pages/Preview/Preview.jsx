@@ -6,7 +6,8 @@ import MultipleChoice from "../../Components/MultipleChoice";
 import Question from "../../Components/Question";
 import Written from "../../Components/Written";
 import YesNo from "../../Components/YesNo";
-import LikertScale from "../../Components/LikertScale";
+import SimpleLikertScale from "../../Components/SimpleLikertScale";
+import TableLikertScale from "../../Components/TableLikertScale";
 import { LuRefreshCw } from "react-icons/lu";
 import { router } from "@inertiajs/react";
 import CheckBox from "../../Components/CheckBox";
@@ -273,24 +274,54 @@ function PreviewContent({ form }) {
                                                         {question.answer
                                                             .type ===
                                                             "likert_scale" && (
-                                                            <LikertScale
-                                                                choice={
-                                                                    question
-                                                                        .answer
-                                                                        .type
-                                                                }
-                                                                questionId={
-                                                                    question.question_uid
-                                                                }
-                                                                formMode={
-                                                                    formMode
-                                                                }
-                                                                structure={
+                                                            <>
+                                                                {/* Table Likert Scale */}
+                                                                {question.answer
+                                                                    .structure &&
                                                                     question
                                                                         .answer
                                                                         .structure
-                                                                }
-                                                            />
+                                                                        .statements &&
+                                                                    question
+                                                                        .answer
+                                                                        .structure
+                                                                        .options && (
+                                                                        <TableLikertScale
+                                                                            choice={
+                                                                                question
+                                                                                    .answer
+                                                                                    .type
+                                                                            }
+                                                                            questionId={
+                                                                                question.question_uid
+                                                                            }
+                                                                            formMode={
+                                                                                formMode
+                                                                            }
+                                                                        />
+                                                                    )}
+
+                                                                {/* Simple Likert Scale */}
+                                                                {Array.isArray(
+                                                                    question
+                                                                        .answer
+                                                                        .structure
+                                                                ) && (
+                                                                    <SimpleLikertScale
+                                                                        choice={
+                                                                            question
+                                                                                .answer
+                                                                                .type
+                                                                        }
+                                                                        questionId={
+                                                                            question.question_uid
+                                                                        }
+                                                                        formMode={
+                                                                            formMode
+                                                                        }
+                                                                    />
+                                                                )}
+                                                            </>
                                                         )}
                                                     </div>
                                                 </div>

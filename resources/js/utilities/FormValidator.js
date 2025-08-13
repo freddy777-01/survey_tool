@@ -40,8 +40,8 @@ export function ValidatorForm(form) {
             return { valid: false, message: "Question content is required." };
         }
         if (
-            question.choice === "multiple_choice" &&
-            (!question.choices || question.choices.length < 2)
+            question.answer.type === "multiple_choice" &&
+            (!question.answer.structure || question.answer.structure.length < 2)
         ) {
             return {
                 valid: false,
@@ -61,7 +61,26 @@ export function ValidatorForm(form) {
                 };
             }
         }
-        if (question.choice === "written" && question.answer) {
+        if (question.answer.type === "likert_scale") {
+            if (
+                !question.answer.structure ||
+                (Array.isArray(question.answer.structure) &&
+                    question.answer.structure.length === 0) ||
+                (typeof question.answer.structure === "object" &&
+                    (!question.answer.structure.options ||
+                        question.answer.structure.options.length === 0))
+            ) {
+                return {
+                    valid: false,
+                    message: "Options are required for Likert scale questions.",
+                };
+            }
+        }
+        if (
+            question.answer.type === "written" &&
+            question.answer.structure &&
+            question.answer.structure.length > 0
+        ) {
             return {
                 valid: false,
                 message:

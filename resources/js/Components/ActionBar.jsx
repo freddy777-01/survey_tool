@@ -211,10 +211,11 @@ export default function ActionBar({ questionId, toast }) {
 
         const validation = ValidatorForm(form);
         if (!validation.valid) {
-            // console.log("Validation failed for form:", form);
+            console.log("Validation failed for form:", form);
+            console.log("Validation message:", validation.message);
             toast.warning(validation.message);
         } else {
-            // console.log("Form is valid, submitting:", form);
+            console.log("Form is valid, submitting:", form);
             router.post("/save-form", form, {
                 preserveState: true,
                 onSuccess: (r) => {
@@ -222,7 +223,7 @@ export default function ActionBar({ questionId, toast }) {
                     toast.success("Survey saved successfully!");
                 },
                 onError: (e) => {
-                    // console.log(e);
+                    console.log("Save error:", e);
                     toast.error("Failed to save survey. Please try again.");
                 },
             });

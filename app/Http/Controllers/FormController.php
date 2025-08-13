@@ -78,25 +78,16 @@ class FormController extends Controller
     {
         $form_uid = $form['form_uid'];
         $form_id = Form::where('form_uid', $form_uid)->value('id');
-        // dd($form_uid);
+
+        // Only proceed if the form exists
+        if (!$form_id) {
+            return;
+        }
+
         if (count($form['sections']) > 0) {
             foreach ($form['sections'] as $key => $s) {
-
-                /* foreach ($form['questions'] as $key => $q) {
-                        if (Section::where('section_uid', $s['id'])->exists()) {
-                            if ($s['id'] == $q['section']) {
-                                if (Question::where('form_id', Form::where('form_uid', $form_uid)->value('id'))->Where('section_id', Section::where('section_uid', $s['id'])->value('id'))->exists()) {
-                                    if (Answer::where('question_id', Question::where('form_id', Form::where('form_uid', $form_uid)->value('id'))->orWhere('section_id', Section::where('section_uid', $s['id'])->value('id'))->value('id'))->delete() > 0) {
-
-                                        Question::where('form_id', Form::where('form_uid', $form_uid)->value('id'))->Where('section_id', Section::where('section_uid', $s['id'])->value('id'))->delete();
-                                    }
-                                }
-                            }
-                            Section::where('section_uid', $s['id'])->delete();
-                        }
-                    } */
                 $section_id = Section::where('section_uid', $s['section_uid'])->value('id');
-                // dd($s['section_uid']);
+
                 if ($section_id) {
                     // questions in all sections
                     $questions = Question::where('form_id', $form_id)
@@ -104,7 +95,6 @@ class FormController extends Controller
                         ->get();
 
                     foreach ($questions as $question) {
-                        // dd($question->id);
                         //  answers for each question
                         Answer::where('question_id', $question->id)->delete();
                     }
@@ -123,7 +113,6 @@ class FormController extends Controller
                 ->get();
 
             foreach ($questions as $question) {
-                // dd($question->id);
                 //  answers for each question
                 Answer::where('question_id', $question->id)->delete();
             }
@@ -233,7 +222,13 @@ class FormController extends Controller
             return redirect()->back();
         } catch (\Throwable $th) {
             DB::rollBack();
-            // dd($th);
+            \Illuminate\Support\Facades\Log::error('Form save error', [
+                'message' => $th->getMessage(),
+                'file' => $th->getFile(),
+                'line' => $th->getLine(),
+                'trace' => $th->getTraceAsString(),
+                'form_data' => $form
+            ]);
             return redirect()->back()->withErrors(['error' => $th->getMessage()]);
         }
     }

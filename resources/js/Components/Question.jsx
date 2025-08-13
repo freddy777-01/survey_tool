@@ -7,6 +7,7 @@ import { FormContext } from "@/utilities/FormProvider";
 import YesNo from "./YesNo";
 import LikertScale from "./LikertScale";
 import { LuPencilLine } from "react-icons/lu";
+import { Button } from "@/Components/ui/button";
 
 export default function Question({
     questionId,
@@ -22,13 +23,18 @@ export default function Question({
         React.useState(defaultSection);
 
     useEffect(() => {
+        // If defaultSection is provided (from edit page), use it
+        if (defaultSection && defaultSection.id) {
+            setSelectedSection(defaultSection);
+            return;
+        }
+
+        // Otherwise, find the section from formContext (for create mode)
         let _selectedSection = formContext.getSections().find((section) => {
             return section.questions.includes(questionId);
         });
-        // console.log(content);
         setSelectedSection(_selectedSection ? _selectedSection : "");
-    }, [formContext.getSections()]);
-    // console.log(selectedSection);
+    }, [formContext.getSections(), defaultSection, questionId]);
 
     return (
         <li className="w-[40rem] p-2 rounded-lg shadow-lg bg-gray-100 my-5 list-none">
@@ -50,11 +56,18 @@ export default function Question({
                                         e.target.value
                                     )
                                 }
-                                defaultValue={selectedSection.id}
+                                value={
+                                    selectedSection?.section_uid ||
+                                    selectedSection?.id ||
+                                    ""
+                                }
                             >
-                                <option value={0}>Assign Section</option>
+                                <option value="">Assign Section</option>
                                 {formContext.getSections().map((section) => (
-                                    <option value={section.id} key={section.id}>
+                                    <option
+                                        value={section.section_uid}
+                                        key={section.section_uid}
+                                    >
                                         {section.name === ""
                                             ? `Section : ${section.number}`
                                             : section.name}
@@ -63,24 +76,26 @@ export default function Question({
                             </select>
 
                             {selectedSection && (
-                                <div className="p-1 text-gray-600">
+                                <div className="px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded-md font-medium">
                                     {selectedSection.name === ""
-                                        ? `Section : ${selectedSection.number}`
+                                        ? `Section ${selectedSection.number}`
                                         : selectedSection.name}
                                 </div>
                             )}
                         </div>
                     )}
 
-                    <button
-                        className="bg-blue-300 hover:bg-blue-500 text-white p-1 px-1 rounded-md transition-colors cursor-pointer"
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="p-1 text-red-600 hover:bg-red-50 hover:text-red-700"
                         title="delete question"
                         onClick={() =>
                             formContext.removeFormQuestion(questionId)
                         }
                     >
-                        <ImBin2 />
-                    </button>
+                        <ImBin2 className="w-4 h-4" />
+                    </Button>
                 </div>
             )}
 

@@ -2,6 +2,34 @@ export function ValidatorForm(form) {
     if (form === null || !form.title || form.title.trim() === "") {
         return { valid: false, message: "Form title is required." };
     }
+
+    // Enhanced timeline validation
+    if (!form.begin_date || !form.end_date) {
+        return {
+            valid: false,
+            message:
+                "Start and end dates are required for the survey timeline.",
+        };
+    }
+
+    const begin = new Date(form.begin_date);
+    const end = new Date(form.end_date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (!(begin instanceof Date) || isNaN(begin.getTime())) {
+        return { valid: false, message: "Invalid start date format." };
+    }
+    if (!(end instanceof Date) || isNaN(end.getTime())) {
+        return { valid: false, message: "Invalid end date format." };
+    }
+    if (end <= begin) {
+        return { valid: false, message: "End date must be after start date." };
+    }
+    if (begin < today) {
+        return { valid: false, message: "Start date cannot be in the past." };
+    }
+
     if (!form.questions || form.questions.length === 0) {
         return { valid: false, message: "At least one question is required." };
     }
@@ -42,46 +70,82 @@ export function ValidatorForm(form) {
         }
     }
 
-    let questionsNotInSections = [];
-    let questionsInEitherSections = [];
-    let sectionsWithNoQuestions = [];
-    if (form.sections.length > 0) {
-        // if sections are available
+    // Section assignment validation
+    if (form.sections && form.sections.length > 0) {
+        let questionsNotInSections = [];
+        let questionsInEitherSections = [];
+        let sectionsWithNoQuestions = [];
+
+        /* console.log("=== VALIDATION DEBUG ===");
+        console.log("Form sections:", form.sections);
+        console.log("Form questions:", form.questions); */
+
+        // Collect all question IDs that are assigned to sections
         form.sections.forEach((section) => {
-            // let sectionQuestions = section.questions;
             if (!section.name || section.name.trim() === "") {
                 return {
                     valid: false,
                     message: "Section name is required.",
                 };
             }
-            for (const question_uid of section.questions) {
-                questionsInEitherSections.push(question_uid);
+
+            /* console.log(
+                `Section ${section.name} (${section.section_uid}) has questions:`,
+                section.questions
+            ); */
+
+            // Add all question IDs from this section
+            if (section.questions && Array.isArray(section.questions)) {
+                section.questions.forEach((questionId) => {
+                    questionsInEitherSections.push(questionId);
+                });
             }
-            if (section.questions.length == 0) {
-                sectionsWithNoQuestions.push(section.id);
+
+            // Check if section has no questions
+            if (!section.questions || section.questions.length === 0) {
+                sectionsWithNoQuestions.push(section.section_uid);
             }
         });
-        form.questions.forEach((q) => {
-            // console.log(q.id);
 
-            if (questionsInEitherSections.length > 0)
-                if (!questionsInEitherSections.includes(q.id))
-                    questionsNotInSections.push(q.id);
+        /* console.log(
+            "Questions assigned to sections:",
+            questionsInEitherSections
+        ); */
+
+        // Check which questions are not assigned to any section
+        form.questions.forEach((question) => {
+            const questionId = question.question_uid || question.id;
+            /* console.log(
+                `Checking question ${questionId} (${question.question})`
+            ); */
+            if (!questionsInEitherSections.includes(questionId)) {
+                questionsNotInSections.push(questionId);
+                /* console.log(
+                    `Question ${questionId} is NOT assigned to any section`
+                ); */
+            } else {
+                // console.log(`Question ${questionId} IS assigned to a section`);
+            }
         });
 
-        // console.log(questionsInEitherSections);
-        return questionsNotInSections.length > 0 ||
-            sectionsWithNoQuestions.length > 0
-            ? {
-                  valid: false,
-                  message:
-                      "Please assign questions to available sections or remove unassigned sections",
-              }
-            : { valid: true };
+        /* console.log("Questions not in sections:", questionsNotInSections);
+        console.log("=== END VALIDATION DEBUG ==="); */
+
+        // Return validation result
+        if (questionsNotInSections.length > 0) {
+            return {
+                valid: false,
+                message: `Please assign ${questionsNotInSections.length} question(s) to available sections.`,
+            };
+        }
+
+        if (sectionsWithNoQuestions.length > 0) {
+            return {
+                valid: false,
+                message: `Please assign questions to sections or remove empty sections.`,
+            };
+        }
     }
-
-    // return questionsNotInSections;
 
     return { valid: true };
 }

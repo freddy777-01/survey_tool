@@ -1,8 +1,9 @@
-import React, { use, useEffect } from "react";
-import { RxCross2 } from "react-icons/rx";
-import { CgAddR } from "react-icons/cg";
-import moment from "moment";
+import React, { useEffect, useState } from "react";
 import { FormContext } from "@/utilities/FormProvider";
+import { CgAddR } from "react-icons/cg";
+import { RxCross2 } from "react-icons/rx";
+import { Button } from "@/Components/ui/button";
+import moment from "moment";
 
 export default function MultipleChoice({
     questionId,
@@ -17,7 +18,7 @@ export default function MultipleChoice({
     useEffect(() => {
         const question = formContext
             .getFormQuestions()
-            .find((q) => q.id === questionId);
+            .find((q) => q.question_uid === questionId);
 
         if (question && question.answer && question.answer.structure) {
             setChoices(question.answer.structure);
@@ -25,7 +26,9 @@ export default function MultipleChoice({
     }, [formContext.getFormQuestions(), questionId]);
 
     useEffect(() => {
-        formContext.changeAnswerStructure(questionId, choice, choices);
+        if (formMode === "create" || formMode === "edit") {
+            formContext.changeAnswerStructure(questionId, choice, choices);
+        }
     }, [choice]);
 
     let updateChoices = () => {};
@@ -77,8 +80,10 @@ export default function MultipleChoice({
                             )}
                         </div>
                         {(formMode == "create" || formMode == "edit") && (
-                            <button
-                                className="ml-2 p-1 rounded-md text-black hover:bg-gray-200 transition-colors cursor-pointer"
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="ml-2 p-1 text-red-600 hover:bg-red-50 hover:text-red-700"
                                 onClick={() =>
                                     formContext.removeQuestionChoice(
                                         questionId,
@@ -86,16 +91,18 @@ export default function MultipleChoice({
                                     )
                                 }
                             >
-                                <RxCross2 />
-                            </button>
+                                <RxCross2 className="w-4 h-4" />
+                            </Button>
                         )}
                     </li>
                 ))}
             </ul>
             {(formMode == "create" || formMode == "edit") && (
                 <div id="choices" className="mt-2">
-                    <button
-                        className="flex flex-row justify-between items-center p-1 bg-blue-300 rounded-md shadow-md hover:bg-blue-400 transition-colors cursor-pointer"
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-2 border-blue-300 text-blue-600 hover:bg-blue-50 hover:border-blue-400"
                         onClick={() =>
                             formContext.addQuestionChoice(
                                 questionId,
@@ -103,11 +110,9 @@ export default function MultipleChoice({
                             )
                         }
                     >
-                        <CgAddR className="mx-auto" title="" />
-                        <span className="text-gray-700 font-semibold mx-2">
-                            Add option
-                        </span>
-                    </button>
+                        <CgAddR className="w-4 h-4" />
+                        <span>Add option</span>
+                    </Button>
                 </div>
             )}
         </div>

@@ -19,7 +19,10 @@ export default function Sections() {
                     </p>
                     <ul>
                         {formContext.getSections().map((section) => (
-                            <Section section={section} key={section.id} />
+                            <Section
+                                section={section}
+                                key={section.section_uid}
+                            />
                         ))}
                         {/* <li>section one</li> */}
                     </ul>

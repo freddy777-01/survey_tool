@@ -10,6 +10,9 @@ import { Link, router } from "@inertiajs/react";
 import Joi from "joi";
 import { MdCreateNewFolder } from "react-icons/md";
 import { ValidatorForm } from "@/utilities/FormValidator";
+import { Button } from "@/Components/ui/button";
+import moment from "moment";
+import { makeApiRequest } from "@/utilities/api";
 
 // import { ToastContainer, toast } from "react-toastify";
 
@@ -137,163 +140,257 @@ export default function ActionBar({ questionId, toast }) {
             } */
     };
     const submitForm = () => {
-        // console.log(formContext.getSections());
-        // console.log(formContext.checkEmptySections());
-        // console.log(formContext.getFormUID());
-        /* const form = {
-            form_uid: moment().valueOf(),
-            title: formContext._formTitle(),
-            description: formContext._formDescription(),
-            sections: formContext.getSections(),
-            questions: formContext.getFormQuestions(),
-        }; */
+        let form;
 
-        let form = JSON.parse(localStorage.getItem(formContext.getFormUID()));
+        // In edit mode, always use context data instead of localStorage
+        if (formContext.getFormMode() === "edit") {
+            form = {
+                form_uid: formContext.getFormUID(),
+                title: formContext._formTitle(),
+                description: formContext._formDescription(),
+                begin_date: formContext._beginDate(),
+                end_date: formContext._endDate(),
+                sections: formContext.getSections(),
+                questions: formContext.getFormQuestions(),
+            };
+            // console.log("Form from context (edit mode):", form);
+        } else {
+            // For create mode, try localStorage first, then fallback to context
+            form = JSON.parse(localStorage.getItem(formContext.getFormUID()));
+
+            // Debug logging to see what's in the form
+            /* console.log("Form from localStorage:", form);
+            console.log("Form title from context:", formContext._formTitle());
+            console.log("Form UID:", formContext.getFormUID());
+            console.log("Form mode:", formContext.getFormMode()); */
+
+            // If form is null or doesn't have title, try to get it from context
+            if (!form || !form.title) {
+                form = {
+                    form_uid: formContext.getFormUID(),
+                    title: formContext._formTitle(),
+                    description: formContext._formDescription(),
+                    begin_date: formContext._beginDate(),
+                    end_date: formContext._endDate(),
+                    sections: formContext.getSections(),
+                    questions: formContext.getFormQuestions(),
+                };
+                console.log("Reconstructed form:", form);
+            }
+        }
+
+        // Additional timeline validation
+        const beginDate = formContext._beginDate();
+        const endDate = formContext._endDate();
+
+        if (!beginDate || !endDate) {
+            toast.error(
+                "Please set both start and end dates for the survey timeline"
+            );
+            return;
+        }
+
+        const begin = moment(beginDate);
+        const end = moment(endDate);
+        const today = moment().startOf("day");
+
+        if (!begin.isValid() || !end.isValid()) {
+            toast.error("Please enter valid dates for the timeline");
+            return;
+        }
+
+        if (end.isSameOrBefore(begin)) {
+            toast.error("End date must be after start date");
+            return;
+        }
+
+        if (begin.isBefore(today)) {
+            toast.error("Start date cannot be in the past");
+            return;
+        }
+
         const validation = ValidatorForm(form);
         if (!validation.valid) {
-            // console.log(form);
-
+            console.log("Validation failed for form:", form);
             toast.warning(validation.message);
         } else {
-            // console.log(form);
-            router.post("/save-form", form, {
+            console.log("Form is valid, submitting:", form);
+            /* router.post("/save-form", form, {
                 preserveState: true,
                 onSuccess: (r) => {
                     formContext._setFormSavedStatus(true);
-                    // console.log(r);
-                    toast.success("Saving successfully!");
+                    toast.success("Survey saved successfully!");
                 },
                 onError: (e) => {
-                    console.log(e);
+                    // console.log(e);
+                    toast.error("Failed to save survey. Please try again.");
                 },
-            });
+            }); */
         }
-
-        /* if (formContext.getFormQuestions().length === 0) {
-            toast.error("Please add at least one question ");
-        } else if (formContext.checkEmptySections()) {
-            toast.warning(
-                "Please assign questions to available sections or remove unassigned sections",
-                { className: "w-[20rem]" }
-            );
-        } else {
-            let form = JSON.parse(
-                localStorage.getItem(formContext.getFormUID())
-            );
-
-            if (validator(form)) {
-                router.post("/save-form", form, {
-                    preserveState: true,
-                    onSuccess: (r) => {
-                        formContext._setFormSavedStatus(true);
-                        console.log(r);
-                        toast.success("Saving successfully!");
-                    },
-                    onError: (e) => {
-                        console.log(e);
-                    },
-                });
-            } else {
-                console.log("There are some errors");
-            }
-        } */
     };
     return (
         <div className="flex flex-row justify-center items-center">
-            <div className="flex flex-row gap-x-3 items-center p-4 bg-gray-100 rounded-lg shadow-md">
-                <button
-                    className="flex flex-row justify-center items-center bg-blue-400 hover:bg-blue-500 text-white p-2 rounded-lg cursor-pointer"
-                    title="add question"
+            <div className="flex flex-row gap-x-3 items-center">
+                <Button
+                    variant="default"
+                    size="sm"
+                    className="p-1 px-3 bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
                     onClick={formContext.addFormQuestion}
                 >
-                    <CgAddR className="mx-auto" title="" />
-                    <span className=" font-semibold mx-2">Add question</span>
-                </button>
-                <button
-                    className="flex flex-row justify-center items-center bg-blue-400 hover:bg-blue-500 text-white p-2 rounded-lg cursor-pointer"
-                    title="add question"
+                    <CgAddR className="w-4 h-4" />
+                    <span>Add Question</span>
+                </Button>
+                <Button
+                    variant="default"
+                    size="sm"
+                    className="p-1 px-3 bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
                     onClick={formContext.addSection}
                 >
-                    <TiEqualsOutline className="mx-auto" title="" />
-                    <span className=" font-semibold mx-2">Add Section</span>
-                </button>
+                    <TiEqualsOutline className="w-4 h-4" />
+                    <span>Add Section</span>
+                </Button>
             </div>
-            <div className="absolute right-[2rem] text-white font-semibold text-lg flex flex-row justify-end items-center gap-x-2">
-                <a
-                    // href={"/preview"}
-                    target="_blank"
-                    className="flex flex-row gap-x-2 items-center p-2 px-2 rounded-lg bg-blue-400 hover:bg-blue-500 cursor-pointer transition-colors"
+            <div className="p-1 px-3 absolute right-[2rem] text-white font-semibold text-lg flex flex-row justify-end items-center gap-x-2">
+                <Button
+                    variant="default"
+                    size="sm"
+                    className="p-1 px-3 bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                    onClick={() => router.get("/survey/create")}
                 >
                     <MdCreateNewFolder />
                     <span>Create</span>
-                </a>
-                <button
-                    // href={"/preview"}
-                    target="_blank"
-                    className={`flex flex-row gap-x-2 items-center p-2 px-2 rounded-lg bg-blue-400 hover:bg-blue-500  transition-colors ${
-                        !formContext._formSavedStatus()
-                            ? "cursor-not-allowed"
-                            : "cursor-pointer"
-                    }`}
+                </Button>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    className="p-1 px-3 border-blue-500 text-blue-600 hover:bg-blue-50 flex items-center gap-2"
                     onClick={(e) => {
-                        /* console.log(
-                            JSON.parse(
-                                localStorage.getItem(formContext.getFormUID())
-                            )
-                        );
-                        console.log(formContext.getFormUID()); */
-
-                        // window.open("", "_blank");
                         e.preventDefault();
-                        const form_uid = JSON.parse(
-                            localStorage.getItem(formContext.getFormUID())
-                        ).form_uid;
+                        const form_uid = formContext.getFormUID();
+                        if (!form_uid) {
+                            console.error("No form_uid found!");
+                            return;
+                        }
                         const url = `/preview?form_uid=${form_uid}`;
                         window.open(url, "_blank");
-                        /* router.get(
-                            "/preview",
-                            {
-                                form_uid: JSON.parse(
-                                    localStorage.getItem(
-                                        formContext.getFormUID()
-                                    )
-                                ).form_uid,
-                            },
-                            {
-                                preserveState: true,
-                                onSuccess: (r) => {
-                                    // console.log(r);
-                                    window.open(r.url, "_blank");
-                                },
-                            }
-                        ); */
                     }}
-                    disabled={!formContext._formSavedStatus()}
                 >
                     <LuEye />
                     <span>Preview</span>
-                </button>
+                </Button>
 
-                <button
-                    className="flex flex-row gap-x-2 items-center p-2 px-2 rounded-lg bg-blue-400 hover:bg-blue-500 cursor-pointer transition-colors"
-                    disabled={!formContext._formSavedStatus()}
+                <Button
+                    variant="default"
+                    size="sm"
+                    className="p-1 px-3 bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
+                    disabled={
+                        formContext.getFormMode() !== "edit" &&
+                        !formContext._formSavedStatus()
+                    }
+                    onClick={async () => {
+                        if (
+                            formContext.getFormMode() !== "edit" &&
+                            !formContext._formSavedStatus()
+                        ) {
+                            toast.warning("Please save the form first");
+                            return;
+                        }
+
+                        const beginDate = formContext._beginDate();
+                        const endDate = formContext._endDate();
+
+                        if (!beginDate || !endDate) {
+                            toast.error(
+                                "Please set start and end dates before publishing"
+                            );
+                            return;
+                        }
+
+                        // For edit mode, get form data from the context instead of localStorage
+                        let form;
+                        if (formContext.getFormMode() === "edit") {
+                            // Get the published status from the FormProvider
+                            form = {
+                                form_uid: formContext.getFormUID(),
+                                published: formContext._publishedStatus()
+                                    ? 1
+                                    : 0,
+                                begin_date: beginDate,
+                                end_date: endDate,
+                            };
+                        } else {
+                            form = JSON.parse(
+                                localStorage.getItem(formContext.getFormUID())
+                            );
+                        }
+
+                        const isRepublish = form.published === 1;
+
+                        if (isRepublish) {
+                            const confirmed = confirm(
+                                "This will republish the survey. You must change the timeline. Continue?"
+                            );
+                            if (!confirmed) return;
+                        }
+
+                        try {
+                            const response = await makeApiRequest(
+                                "/api/surveys/publish",
+                                {
+                                    form_uid: formContext.getFormUID(),
+                                    begin_date: beginDate,
+                                    end_date: endDate,
+                                }
+                            );
+
+                            const data = await response.json();
+
+                            if (response.ok) {
+                                toast.success(data.message);
+                                // Update local form state if not in edit mode
+                                if (formContext.getFormMode() !== "edit") {
+                                    form.published = 1;
+                                    form.status = "active";
+                                    form.begin_date = beginDate;
+                                    form.end_date = endDate;
+                                    localStorage.setItem(
+                                        formContext.getFormUID(),
+                                        JSON.stringify(form)
+                                    );
+                                }
+                                // Reload the page to reflect the published status
+                                window.location.reload();
+                            } else {
+                                toast.error(
+                                    data.error || "Failed to publish survey"
+                                );
+                            }
+                        } catch (error) {
+                            toast.error("Failed to publish survey");
+                            console.error(error);
+                        }
+                    }}
                 >
                     <MdOutlinePublish />
                     <span>Publish</span>
-                </button>
+                </Button>
 
-                <button
-                    className={`flex flex-row items-center gap-x-2 p-2 px-2 rounded-lg ${
+                <Button
+                    variant="default"
+                    size="sm"
+                    className={`p-1 px-3 flex items-center gap-2 ${
                         formContext._formSavedStatus()
-                            ? "bg-blue-400 hover:bg-blue-500 cursor-not-allowed"
-                            : "bg-blue-400 hover:bg-blue-500 cursor-pointer"
-                    }  transition-colors`}
+                            ? "bg-gray-400 hover:bg-gray-400 cursor-not-allowed"
+                            : "bg-blue-600 hover:bg-blue-700"
+                    } text-white`}
                     onClick={() => submitForm()}
                     disabled={formContext._formSavedStatus()}
                 >
                     <IoMdCloudUpload />
-                    <span>Save</span>
-                </button>
+                    <span>
+                        {formContext._formSavedStatus() ? "Saved" : "Save"}
+                    </span>
+                </Button>
             </div>
         </div>
     );

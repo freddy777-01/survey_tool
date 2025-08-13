@@ -2,6 +2,7 @@ import React from "react";
 import { FormContext } from "@/utilities/FormProvider";
 import { RxCross2 } from "react-icons/rx";
 import { FaGreaterThan } from "react-icons/fa6";
+import { Button } from "@/Components/ui/button";
 
 export default function Section({ section }) {
     const formContext = React.useContext(FormContext);
@@ -22,17 +23,22 @@ export default function Section({ section }) {
                     }
                     className="w-[7rem] rounded-lg px-1 border-none focus:outline-none focus:ring-1 focus:ring-blue-300"
                     onChange={(e) =>
-                        formContext.editSectionName(section.id, e.target.value)
+                        formContext.editSectionName(
+                            section.section_uid,
+                            e.target.value
+                        )
                     }
                 />
                 {/* Section {section.number} */}
             </div>
-            <button
-                className=" bg-blue-300 hover:bg-blue-400 text-white p-1 rounded-md cursor-pointer"
-                onClick={() => formContext.removeSection(section.id)}
+            <Button
+                variant="ghost"
+                size="sm"
+                className="p-1 text-red-600 hover:bg-red-50 hover:text-red-700"
+                onClick={() => formContext.removeSection(section.section_uid)}
             >
-                <RxCross2 />
-            </button>
+                <RxCross2 className="w-4 h-4" />
+            </Button>
         </li>
     );
 }

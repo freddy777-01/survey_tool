@@ -11,7 +11,11 @@ const FormContext = React.createContext();
  *
  */
 
-function FormProvider({ children }) {
+function FormProvider({
+    children,
+    initialForm = null,
+    initialMode = "create",
+}) {
     const [formQuestions, setFormQuestions] = React.useState([]);
     const [formUID, setFormUID] = React.useState("");
     const [sections, setSections] = React.useState([]);
@@ -19,102 +23,178 @@ function FormProvider({ children }) {
     const [formTitle, setFormTitle] = React.useState("");
     const [isFormDescription, setIsFormDescription] = React.useState(false);
 
+    const [beginDate, setBeginDate] = React.useState("");
+    const [endDate, setEndDate] = React.useState("");
+
     const [formState, setFormState] = React.useState({});
-
     const [formSavedStatus, setFormSavedStatus] = React.useState(false);
+    const [formMode, setFormMode] = React.useState(initialMode);
+    const [isInitialized, setIsInitialized] = React.useState(false);
+    const [publishedStatus, setPublishedStatus] = React.useState(false);
 
-    const modeList = ["create", "edit", "preview"];
-    const [formMode, setFormMode] = React.useState("create");
-
+    // Initialize form based on mode and initial data
     React.useEffect(() => {
-        // update the form object if it exits on browser history
-        localStorage.clear();
-        if (formMode == "create") {
-            let form_uid = moment().valueOf();
-            setFormUID(form_uid);
+        if (initialMode === "create") {
+            // Create mode: generate new form_uid
+            const newFormUID = moment().valueOf();
+            setFormUID(newFormUID);
+            setFormSavedStatus(false);
+        } else if (initialMode === "edit" && initialForm) {
+            // Edit mode: load existing form data
+            setFormUID(initialForm.main.form_uid);
+            setFormTitle(initialForm.main.name || "");
+            setFormDescription(initialForm.main.description || "");
+            setBeginDate(initialForm.main.begin_date || "");
+            setEndDate(initialForm.main.end_date || "");
+            setFormQuestions(initialForm.questions || []);
+            setPublishedStatus(initialForm.main.published || false);
+
+            // Process sections if they exist
+            if (initialForm.sections && initialForm.sections.length > 0) {
+                const processedSections = initialForm.sections.map(
+                    (section) => ({
+                        section_uid: section.section_uid,
+                        name: section.name,
+                        number: section.number || 1,
+                        description:
+                            section.description || "Section Description",
+                        questions: section.questions || [],
+                    })
+                );
+                setSections(processedSections);
+            }
+
+            setFormSavedStatus(true);
+            setIsInitialized(true);
+            console.log("Loaded form for editing:", initialForm.main.form_uid);
+        } else if (initialMode === "preview" && initialForm) {
+            // Preview mode: load form data for read-only display
+            setFormUID(initialForm.form.form_uid);
+            setFormTitle(initialForm.form.name || "");
+            setFormDescription(initialForm.form.description || "");
+            setBeginDate(initialForm.form.begin_date || "");
+            setEndDate(initialForm.form.end_date || "");
+            setFormQuestions(initialForm.questions || []);
+
+            if (initialForm.sections && initialForm.sections.length > 0) {
+                const processedSections = initialForm.sections.map(
+                    (section) => ({
+                        section_uid: section.section_uid,
+                        name: section.name,
+                        number: section.number || 1,
+                        description:
+                            section.description || "Section Description",
+                        questions: section.questions || [],
+                    })
+                );
+                setSections(processedSections);
+            }
+
+            setFormSavedStatus(true);
+            setIsInitialized(true);
+            console.log("Loaded form for preview:", initialForm.form.form_uid);
+        }
+    }, [initialMode, initialForm]);
+
+    // Update localStorage only for create and edit modes, not preview
+    React.useEffect(() => {
+        if (formMode === "preview") {
+            console.log("Preview mode - not saving to localStorage");
+            return;
         }
 
-        /* let form = JSON.parse(localStorage.getItem("form"));
-        setFormState(form? form : []); */
-    }, []);
+        if (formUID && formUID !== "") {
+            let form = {
+                form_uid: formUID,
+                title: formTitle,
+                description: formDescription,
+                begin_date: beginDate,
+                end_date: endDate,
+                sections: sections,
+                questions: formQuestions,
+                mode: formMode,
+            };
 
+            localStorage.setItem(formUID, JSON.stringify(form));
+            setFormState(form);
+        }
+    }, [
+        formUID,
+        formTitle,
+        formDescription,
+        beginDate,
+        endDate,
+        formQuestions,
+        sections,
+        formMode,
+    ]);
+
+    // Track changes and reset saved status for edit mode
     React.useEffect(() => {
-        // Update the form object when some variables are changed
-        setFormSavedStatus(false);
-
-        let form = {
-            form_uid: formUID,
-            title: formTitle,
-            description: formDescription,
-            sections: sections,
-            questions: formQuestions,
-        };
-        if (formUID != "") localStorage.setItem(formUID, JSON.stringify(form));
-        setFormState(form);
-    }, [formTitle, formDescription, formQuestions, sections]);
-
-    /*
-    *****From schema*****
-
-     form = {
-            title: formTitle,
-            description: formDescription,
-            sections: sections,
-            questions: formQuestions,
-        };
-
-         section = {
-            id,
-            name: "",
-            number: sections.length + 1,
-            description: "Section Description",
-            questions: [],
-        };
-
-        question = {
-            id,
-            question: "",
-            section:"",
-            description:""
-            answer: {
-                type: "multiple_choice", // If written structure will be empty array
-                structure: [],
-            },
-        };
-       structure = {
-                    id,
-                    name: type, //can be multi_choice/written/
-                    value: `option${q.answer.structure.length + 1}`,
-                }
-
-    ****End of form schema*****
-        */
-
-    const _formState = () => formState;
-    //End of form
-
-    //Form save status
-
-    // Form description
-    const _isFormDescription = () => isFormDescription;
-    const _setIsFormDescription = (d) => setIsFormDescription(d);
-    const _setFormDescription = (d) => setFormDescription(d);
-    const _formDescription = () => formDescription;
-    // End of form description
-
-    const getFormQuestions = () => formQuestions;
+        if (formMode === "edit" && isInitialized && formSavedStatus) {
+            console.log("Form changed in edit mode - resetting saved status");
+            setFormSavedStatus(false);
+        }
+    }, [
+        formTitle,
+        formDescription,
+        formQuestions,
+        sections,
+        beginDate,
+        endDate,
+        formMode,
+        isInitialized,
+        formSavedStatus,
+    ]);
 
     // Form Title
     const _formTitle = () => formTitle;
     const _setFormTitle = (t) => setFormTitle(t);
-    // End of form title
+
+    // Form Description
+    const _isFormDescription = () => isFormDescription;
+    const _setIsFormDescription = (d) => setIsFormDescription(d);
+    const _setFormDescription = (d) => setFormDescription(d);
+    const _formDescription = () => formDescription;
+
+    // Timeline
+    const _beginDate = () => beginDate;
+    const _endDate = () => endDate;
+    const _setBeginDate = (d) => setBeginDate(d);
+    const _setEndDate = (d) => setEndDate(d);
+
+    // Form Questions
+    const getFormQuestions = () => formQuestions;
+
+    // Form Mode
+    const getFormMode = () => formMode;
+    const setFormModeContext = (mode) => {
+        console.log("Setting form mode to:", mode);
+        setFormMode(mode);
+    };
+
+    // Form UID
+    const getFormUID = () => formUID;
+    const setFormUIDContext = (uid) => setFormUID(uid);
+
+    // Form Save Status
+    const _formSavedStatus = () => formSavedStatus;
+    const _setFormSavedStatus = (s) => setFormSavedStatus(s);
+
+    // Published Status
+    const _publishedStatus = () => publishedStatus;
+    const _setPublishedStatus = (s) => setPublishedStatus(s);
+
+    // Form State
+    const _formState = () => formState;
+    const _setFormState = (f) => setFormState(f);
 
     //Dealing with sections
     const addSection = () => {
         // adding section
-        let id = moment().valueOf();
+        let section_uid = moment().valueOf();
         let section = {
-            id,
+            section_uid,
             name: `Section ${sections.length + 1}`,
             number: sections.length + 1,
             description: "Section Description",
@@ -124,32 +204,50 @@ function FormProvider({ children }) {
         // console.log(sections);
     };
 
-    const addSectionToQuestion = (questionId, sectionId) => {
-        let updatedQuestions = formQuestions.map((question) => {
-            if (question.id == questionId) {
-                question.section = sectionId;
-            }
-            return question;
-        });
-        setFormQuestions(updatedQuestions);
-    };
-
     const addQuestionToSection = (questionId, sectionId) => {
-        if (sectionId == 0) return;
-        // console.log("Section Id :" + sectionId);
+        // If sectionId is empty or "0", remove question from all sections
+        if (!sectionId || sectionId === "" || sectionId === "0") {
+            let updatedSections = sections.map((section) => {
+                section.questions = section.questions.filter(
+                    (qId) => qId !== questionId
+                );
+                return section;
+            });
+            setSections(updatedSections);
+
+            // Remove section_uid from question
+            let updatedQuestions = formQuestions.map((question) => {
+                if (question.question_uid == questionId) {
+                    question.section_uid = "";
+                }
+                return question;
+            });
+            setFormQuestions(updatedQuestions);
+            return;
+        }
+
+        // Assign question to the selected section
         let updatedSections = sections.map((section) => {
+            // Remove question from all sections first
             section.questions = section.questions.filter(
                 (qId) => qId !== questionId
             );
-            if (section.id == sectionId) {
+            // Add to the selected section
+            if (section.section_uid == sectionId) {
                 section.questions.push(questionId);
             }
             return section;
         });
         setSections(updatedSections);
 
-        // console.log(sections);
-        addSectionToQuestion(questionId, sectionId);
+        // Update question's section_uid
+        let updatedQuestions = formQuestions.map((question) => {
+            if (question.question_uid == questionId) {
+                question.section_uid = sectionId;
+            }
+            return question;
+        });
+        setFormQuestions(updatedQuestions);
     };
 
     const removeSectionFromQuestion = (sectionId) => {
@@ -163,7 +261,7 @@ function FormProvider({ children }) {
     };
     const removeSection = (sectionId) => {
         let newSections = sections.filter(
-            (section) => section.id !== sectionId
+            (section) => section.section_uid !== sectionId
         );
         setSections(newSections);
         removeSectionFromQuestion(sectionId);
@@ -186,12 +284,12 @@ function FormProvider({ children }) {
                     questionsInEitherSections.push(section.questions[i]);
                 }
                 if (section.questions.length == 0) {
-                    sectionsWithNoQuestions.push(section.id);
+                    sectionsWithNoQuestions.push(section.section_uid);
                 }
             });
             formQuestions.forEach((q) => {
-                if (!questionsInEitherSections.includes(q.id)) {
-                    questionsNotInSections.push(q.id);
+                if (!questionsInEitherSections.includes(q.question_uid)) {
+                    questionsNotInSections.push(q.question_uid);
                 }
             });
         }
@@ -204,7 +302,7 @@ function FormProvider({ children }) {
 
     const editSectionName = (sectionId, name) => {
         let updatedSections = sections.map((section) => {
-            if (section.id == sectionId) {
+            if (section.section_uid == sectionId) {
                 section.name = name;
             }
             return section;
@@ -231,7 +329,7 @@ function FormProvider({ children }) {
         let question = {
             question_uid,
             question: "",
-            section: "",
+            section_uid: "",
             description: "",
             answer: {
                 type: "multiple_choice",
@@ -247,7 +345,7 @@ function FormProvider({ children }) {
     const writeQuestion = (questionId, qn) => {
         // updating or writing new question
         let updatedQuestions = formQuestions.map((q) => {
-            if (q.id === questionId) {
+            if (q.question_uid === questionId) {
                 q.question = qn;
             }
             return q;
@@ -258,7 +356,7 @@ function FormProvider({ children }) {
     const addQuestionChoice = (questionId, type) => {
         let id = moment().valueOf();
         let newQuestions = formQuestions.map((q, i) => {
-            if (q.id === questionId) {
+            if (q.question_uid === questionId) {
                 q.answer.structure.push({
                     id,
                     name: type,
@@ -275,11 +373,11 @@ function FormProvider({ children }) {
     const removeFormQuestion = (id) => {
         // removing a question from the form
 
-        let newQuestions = formQuestions.filter((q) => q.id !== id);
+        let newQuestions = formQuestions.filter((q) => q.question_uid !== id);
 
         // removing the question from the section also
         let updateSections = sections.map((section) => {
-            section.questions = section.questions.filter((qId) => qId !== id);
+            section.questions = section.questions.filter((qUId) => qUId !== id);
             return section;
         });
         setSections(updateSections);
@@ -290,7 +388,7 @@ function FormProvider({ children }) {
     const changeQuestionType = (qContent) => {
         /* If question type is equal to written, then structure = null  */
         let newQuestions = formQuestions.map((q) => {
-            if (q.id === qContent.id) {
+            if (q.question_uid === qContent.question_uid) {
                 q.answer.type = "yes_no";
             }
             return q;
@@ -337,7 +435,7 @@ function FormProvider({ children }) {
         // console.log("Ans structure type : " + answerStructureType);
 
         let updatedQuestions = formQuestions.map((q) => {
-            if (q.id === questionId) {
+            if (q.question_uid === questionId) {
                 if (
                     answerStructureType === "multiple_choice" &&
                     q.answer.type === "check_box"
@@ -364,27 +462,6 @@ function FormProvider({ children }) {
     // End dealing with questions
 
     // compiling data before saving
-    const alterFormState = (form) => {
-        let questions = [];
-        setFormUID(form.form_uid);
-        if (form.sections.length > 0) {
-            let updateSections = form.sections.map((section) => {
-                let questionsUIDs = [];
-                section.questions.forEach((q) => {
-                    questionsUIDs.push(q.question_uid);
-                });
-                section.questions = questionsUIDs;
-                return section;
-            });
-            setSections(updateSections);
-        }
-        setFormTitle(form.name);
-        setFormDescription(form.description);
-        setFormQuestions(form.questions);
-        setFormSavedStatus(false);
-
-        setFormState(form);
-    };
     const submitForm = () => {};
     // End of compiling data before saving
     return (
@@ -417,20 +494,27 @@ function FormProvider({ children }) {
                 _setIsFormDescription,
                 _setFormDescription,
                 _formDescription,
+                // timeline
+                _beginDate,
+                _endDate,
+                _setBeginDate,
+                _setEndDate,
                 // End form description
-                alterFormState, // This will be called on form edit page
                 _formState,
-                _setFormState: (f) => setFormState(f),
+                _setFormState,
                 //formUID
-                getFormUID: () => formUID,
-                setFormUID: (uid) => setFormUID(uid),
+                getFormUID,
+                setFormUIDContext,
 
                 //formSave status
-                _formSavedStatus: () => formSavedStatus,
-                _setFormSavedStatus: (s) => setFormSavedStatus(s),
+                _formSavedStatus,
+                _setFormSavedStatus,
                 //Form Mode
-                getFormMode: () => formMode,
-                setFormMode: (mode) => setFormMode(mode),
+                getFormMode,
+                setFormModeContext,
+                // Published Status
+                _publishedStatus,
+                _setPublishedStatus,
             }}
         >
             {children}

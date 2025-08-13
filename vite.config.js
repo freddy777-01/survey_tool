@@ -12,4 +12,12 @@ export default defineConfig({
         tailwindcss(),
         react(),
     ],
+    server: {
+        hmr: {
+            host: "localhost",
+        },
+        watch: {
+            usePolling: true,
+        },
+    },
 });

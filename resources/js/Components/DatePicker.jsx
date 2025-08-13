@@ -58,6 +58,12 @@ export default function DatePicker({
         }
     };
 
+    const validateDate = (dateString) => {
+        if (!dateString) return true;
+        const date = moment(dateString);
+        return date.isValid() && date.isSameOrAfter(moment().startOf('day'));
+    };
+
     return (
         <div className="relative inline-block">
             <input
@@ -65,7 +71,13 @@ export default function DatePicker({
                 name=""
                 id={id || ""}
                 placeholder={placeholder}
-                className="focus:outline-none ring-1  ring-blue-300 focus:ring-blue-300  rounded-md p-2 pr-6 w-[7.2rem] h-[1.5rem]"
+                className={`focus:outline-none ring-1 rounded-md p-2 pr-6 w-[7.2rem] h-[1.5rem] ${
+                    displayValue 
+                        ? validateDate(displayValue) 
+                            ? "ring-green-300 focus:ring-green-500" 
+                            : "ring-red-300 focus:ring-red-500"
+                        : "ring-blue-300 focus:ring-blue-500"
+                }`}
                 value={displayValue}
                 readOnly
                 onClick={openNativePicker}
@@ -80,7 +92,7 @@ export default function DatePicker({
                 <button
                     type="button"
                     aria-label="Clear date"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 w-4 h-4 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
                     onClick={(e) => {
                         e.stopPropagation();
                         clearDateValue();

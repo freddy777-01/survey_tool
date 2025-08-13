@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useId } from "react";
 import Layout from "../Layout";
 import ActionBar from "@/Components/ActionBar";
 import Question from "@/Components/Question";
@@ -8,28 +8,36 @@ import Sections from "@/Components/Sections";
 import { ToastContainer, toast } from "react-toastify";
 import { MdEditNote } from "react-icons/md";
 import DatePicker from "../../Components/DatePicker";
+import { Button } from "@/Components/ui/button";
+import {
+    FiPlus,
+    FiCalendar,
+    FiFileText,
+    FiSettings,
+    FiCheckCircle,
+    FiAlertCircle,
+    FiArrowLeft,
+    FiEye,
+    FiBarChart2,
+} from "react-icons/fi";
+import { router } from "@inertiajs/react";
+import moment from "moment";
 
 //TODO => then finish setting the start and end time for the survey.
 //TODO=> complete editing functionality
-export default function Edit({ form }) {
+function EditContent({ form }) {
     const formContext = React.useContext(FormContext);
-    const [formTitle, setFormTitle] = React.useState("");
-    const [questions, setQuestions] = React.useState([]);
-    const [startDate, setStartDate] = React.useState("");
-    const [endDate, setEndDate] = React.useState("");
-    const [formMode, setFormMode] = React.useState("edit");
+    const startDate = formContext._beginDate();
+    const endDate = formContext._endDate();
 
-    console.log(form);
+    const parentId = useId();
+
+    // console.log(form);
 
     const setSectionQuestions = () => {
         if (form.sections.length > 0) {
         }
     };
-    React.useEffect(() => {
-        formContext.setFormMode("edit");
-        formContext.alterFormState(form);
-        formContext.setFormMode("edit");
-    }, []);
 
     const sectionMapping = (sectionUID) => {
         if (form.sections.length > 0) {
@@ -52,119 +60,414 @@ export default function Edit({ form }) {
         }
         return {};
     };
+
     return (
-        <div className="p-5">
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
             <ToastContainer position="top-center" />
-            <div className="fixed top-0 left-0 z-10 pt-4  w-full h-[4rem] mb-[5rem] flex justify-center items-center">
-                <ActionBar toast={toast} />
-            </div>
-            <div className="absolute  max-md:left-[7rem] top-[7rem] left-[6rem] rounded-md">
-                <Sections />
-            </div>
-            <div className="rounded-md shadow-md absolute right-2 top-[7rem] w-auto p-2">
-                <p className="my-1">Timeline</p>
-                <div className="flex gap-x-2">
-                    <DatePicker
-                        placeholder="Start"
-                        name="start_date"
-                        id="start_date"
-                        value={startDate}
-                        onChange={setStartDate}
-                    />
-                    <span>to</span>
-                    <DatePicker
-                        placeholder="End"
-                        name="end_date"
-                        id="end_date"
-                        value={endDate}
-                        onChange={setEndDate}
-                    />
+
+            {/* Header */}
+            <div className="bg-white shadow-sm border-b border-gray-200">
+                <div className="max-w-7xl mx-auto px-6 py-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-2xl font-bold text-gray-900">
+                                Edit Survey
+                            </h1>
+                            <p className="text-gray-600 mt-1">
+                                Modify your survey settings and questions
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="p-1 px-3 flex items-center gap-2 hover:bg-gray-50"
+                                onClick={() => router.get("/")}
+                            >
+                                <FiArrowLeft className="w-4 h-4" />
+                                Back to Dashboard
+                            </Button>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <Layout>
-                <div className="mt-[2.5rem]" id="survey-form">
-                    <div className="w-[40rem] p-2 rounded-lg shadow-lg bg-gray-100">
-                        <div className="flex justify-between items-center">
-                            <div className="text-left text-gray-500 p-2">
-                                <span className="text-black font-semibold mr-4">
-                                    Title :
-                                </span>{" "}
-                                <input
-                                    type="text"
-                                    className="focus:outline-none focus:ring-blue-300 focus:ring-1  rounded-md p-1.5 w-[25rem]"
-                                    value={formContext._formTitle()}
-                                    placeholder="write here..."
-                                    onChange={(e) =>
-                                        formContext._setFormTitle(
-                                            e.target.value
-                                        )
-                                    }
-                                />
+
+            {/* Action Bar */}
+            <div className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
+                <div className="max-w-7xl mx-auto px-6 py-3">
+                    <ActionBar toast={toast} />
+                </div>
+            </div>
+
+            <div className="max-w-7xl mx-auto px-6 py-8">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                    {/* Main Content */}
+                    <div className="lg:col-span-3">
+                        {/* Form Header */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+                            <div className="flex items-start justify-between mb-6">
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className="bg-blue-100 p-2 rounded-lg">
+                                            <FiFileText className="w-6 h-6 text-blue-600" />
+                                        </div>
+                                        <div>
+                                            <h2 className="text-xl font-semibold text-gray-900">
+                                                Survey Information
+                                            </h2>
+                                            <p className="text-gray-600 text-sm">
+                                                Update your survey details
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                Survey Title *
+                                            </label>
+                                            <input
+                                                type="text"
+                                                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
+                                                    formContext._formTitle() &&
+                                                    formContext
+                                                        ._formTitle()
+                                                        .trim()
+                                                        ? "border-green-300 focus:ring-green-500 focus:border-green-500"
+                                                        : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                                                }`}
+                                                value={formContext._formTitle()}
+                                                placeholder="Enter your survey title..."
+                                                onChange={(e) =>
+                                                    formContext._setFormTitle(
+                                                        e.target.value
+                                                    )
+                                                }
+                                            />
+                                            {formContext._formTitle() &&
+                                                formContext
+                                                    ._formTitle()
+                                                    .trim() && (
+                                                    <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
+                                                        <FiCheckCircle className="w-4 h-4" />
+                                                        Title is set
+                                                    </div>
+                                                )}
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                Description
+                                            </label>
+                                            <textarea
+                                                rows={3}
+                                                placeholder="Describe your survey purpose..."
+                                                value={formContext._formDescription()}
+                                                onChange={(e) =>
+                                                    formContext._setFormDescription(
+                                                        e.target.value
+                                                    )
+                                                }
+                                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <button
-                                className="flex flex-row gap-x-1 items-center text-white font-semibold p-1 px-1 rounded-lg bg-blue-400 hover:bg-blue-500 cursor-pointer transition-colors"
-                                onClick={() =>
-                                    formContext._setIsFormDescription(
-                                        !formContext._isFormDescription()
-                                    )
-                                }
-                            >
-                                <MdEditNote className="text-xl" />
-                                {/* <span> Description</span> */}
-                            </button>
                         </div>
-                        <div className="flex flex-row items-end mt-5">
-                            {(formContext._isFormDescription() ||
-                                formContext._formDescription() != "") && (
-                                <textarea
-                                    cols={70}
-                                    rows={2}
-                                    placeholder="write here...."
-                                    value={formContext._formDescription()}
-                                    onChange={(e) =>
-                                        formContext._setFormDescription(
-                                            e.target.value
-                                        )
-                                    }
-                                    className="resize-none focus:outline-none ring-1 ring-blue-300 focus:ring-1 focus:ring-blue-500 rounded-md p-1.5 italic text-gray-500"
-                                    // disabled={true}
-                                ></textarea>
+
+                        {/* Questions Section */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center gap-3">
+                                    <div className="bg-purple-100 p-2 rounded-lg">
+                                        <TbZoomQuestion className="w-6 h-6 text-purple-600" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-xl font-semibold text-gray-900">
+                                            Survey Questions
+                                        </h2>
+                                        <p className="text-gray-600 text-sm">
+                                            Edit and organize your questions
+                                        </p>
+                                    </div>
+                                </div>
+                                <Button
+                                    onClick={formContext.addFormQuestion}
+                                    variant="default"
+                                    size="sm"
+                                    className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
+                                >
+                                    <FiPlus className="w-4 h-4" />
+                                    Add Question
+                                </Button>
+                            </div>
+
+                            {formContext.getFormQuestions().length > 0 ? (
+                                <div className="space-y-4">
+                                    {formContext.getFormQuestions().map((q) => (
+                                        <Question
+                                            questionId={q.question_uid}
+                                            key={q.question_uid}
+                                            question={q}
+                                            questionChoice={q.answer.type}
+                                            defaultSection={sectionMapping(
+                                                q.section_uid
+                                            )}
+                                        />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-12">
+                                    <TbZoomQuestion className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                                        No questions yet
+                                    </h3>
+                                    <p className="text-gray-600 mb-6">
+                                        Start building your survey by adding
+                                        questions
+                                    </p>
+                                    <Button
+                                        onClick={formContext.addFormQuestion}
+                                        variant="default"
+                                        size="lg"
+                                        className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2 mx-auto"
+                                    >
+                                        <FiPlus className="w-5 h-5" />
+                                        Add Your First Question
+                                    </Button>
+                                </div>
                             )}
                         </div>
                     </div>
-                    <div className="mt-5">
-                        {/* <p className="text-left text-gray-500 p-1">Questions</p> */}
 
-                        {formContext.getFormQuestions().length > 0 ? (
-                            <ul id="questions" className="">
-                                {formContext.getFormQuestions().map((q) => (
-                                    // (q, index) => console.log(q.id)
-
-                                    <Question
-                                        questionId={q.question_uid}
-                                        key={q.id}
-                                        question={q}
-                                        questionChoice={q.answer.type}
-                                        defaultSection={sectionMapping(
-                                            q.section_uid
-                                        )}
-                                        // {...console.log(q)}
-                                    />
-                                ))}
-                            </ul>
-                        ) : (
-                            <div className="flex gap-x-3 items-center justify-center p-5 text-gray-400 text-shadow-2xs  rounded-md">
-                                <span className=" mx-2 ">
-                                    {" "}
-                                    add Questions.....
-                                </span>
-
-                                <TbZoomQuestion />
+                    {/* Sidebar */}
+                    <div className="lg:col-span-1 space-y-6">
+                        {/* Timeline Card */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="bg-orange-100 p-2 rounded-lg">
+                                    <FiCalendar className="w-5 h-5 text-orange-600" />
+                                </div>
+                                <div>
+                                    <h3 className="font-semibold text-gray-900">
+                                        Timeline
+                                    </h3>
+                                    <p className="text-gray-600 text-sm">
+                                        Update survey duration
+                                    </p>
+                                </div>
                             </div>
-                        )}
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Start Date
+                                    </label>
+                                    <DatePicker
+                                        placeholder="Start"
+                                        name="start_date"
+                                        id="start_date"
+                                        value={startDate}
+                                        onChange={formContext._setBeginDate}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        End Date
+                                    </label>
+                                    <DatePicker
+                                        placeholder="End"
+                                        name="end_date"
+                                        id="end_date"
+                                        value={endDate}
+                                        onChange={formContext._setEndDate}
+                                    />
+                                </div>
+
+                                <div className="p-3 rounded-lg bg-gray-50">
+                                    {!startDate || !endDate ? (
+                                        <div className="flex items-center gap-2 text-orange-600 text-sm">
+                                            <FiAlertCircle className="w-4 h-4" />
+                                            Set timeline to save survey
+                                        </div>
+                                    ) : startDate &&
+                                      endDate &&
+                                      moment(endDate).isSameOrBefore(
+                                          moment(startDate)
+                                      ) ? (
+                                        <div className="flex items-center gap-2 text-red-600 text-sm">
+                                            <FiAlertCircle className="w-4 h-4" />
+                                            End date must be after start date
+                                        </div>
+                                    ) : startDate &&
+                                      moment(startDate).isBefore(
+                                          moment().startOf("day")
+                                      ) ? (
+                                        <div className="flex items-center gap-2 text-red-600 text-sm">
+                                            <FiAlertCircle className="w-4 h-4" />
+                                            Start date cannot be in the past
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-2 text-green-600 text-sm">
+                                            <FiCheckCircle className="w-4 h-4" />
+                                            Timeline is valid
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Sections Card */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="bg-green-100 p-2 rounded-lg">
+                                    <FiSettings className="w-5 h-5 text-green-600" />
+                                </div>
+                                <div>
+                                    <h3 className="font-semibold text-gray-900">
+                                        Sections
+                                    </h3>
+                                    <p className="text-gray-600 text-sm">
+                                        Organize questions
+                                    </p>
+                                </div>
+                            </div>
+                            <Sections />
+                        </div>
+
+                        {/* Form Status */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                            <h3 className="font-semibold text-gray-900 mb-4">
+                                Form Status
+                            </h3>
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between p-2 rounded-lg bg-gray-50">
+                                    <span className="text-sm text-gray-700 font-medium">
+                                        Title
+                                    </span>
+                                    <span
+                                        className={`text-sm font-semibold ${
+                                            formContext._formTitle() &&
+                                            formContext._formTitle().trim()
+                                                ? "text-green-600"
+                                                : "text-red-600"
+                                        }`}
+                                    >
+                                        {formContext._formTitle() &&
+                                        formContext._formTitle().trim()
+                                            ? "✓ Valid"
+                                            : "✗ Required"}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between p-2 rounded-lg bg-gray-50">
+                                    <span className="text-sm text-gray-700 font-medium">
+                                        Timeline
+                                    </span>
+                                    <span
+                                        className={`text-sm font-semibold ${
+                                            startDate &&
+                                            endDate &&
+                                            moment(endDate).isAfter(
+                                                moment(startDate)
+                                            )
+                                                ? "text-green-600"
+                                                : "text-red-600"
+                                        }`}
+                                    >
+                                        {startDate &&
+                                        endDate &&
+                                        moment(endDate).isAfter(
+                                            moment(startDate)
+                                        )
+                                            ? "✓ Valid"
+                                            : "✗ Required"}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between p-2 rounded-lg bg-gray-50">
+                                    <span className="text-sm text-gray-700 font-medium">
+                                        Questions
+                                    </span>
+                                    <span
+                                        className={`text-sm font-semibold ${
+                                            formContext.getFormQuestions()
+                                                .length > 0
+                                                ? "text-green-600"
+                                                : "text-red-600"
+                                        }`}
+                                    >
+                                        {formContext.getFormQuestions().length >
+                                        0
+                                            ? "✓ Added"
+                                            : "✗ Required"}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between p-2 rounded-lg bg-gray-50">
+                                    <span className="text-sm text-gray-700 font-medium">
+                                        Published
+                                    </span>
+                                    <span
+                                        className={`text-sm font-semibold ${
+                                            form.main?.published
+                                                ? "text-green-600"
+                                                : "text-orange-600"
+                                        }`}
+                                    >
+                                        {form.main?.published
+                                            ? "✓ Yes"
+                                            : "✗ No"}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Quick Actions */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                            <h3 className="font-semibold text-gray-900 mb-4">
+                                Quick Actions
+                            </h3>
+                            <div className="space-y-3">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full justify-start hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-colors"
+                                    onClick={() => {
+                                        const url = `/preview?form_uid=${form.main.form_uid}`;
+                                        window.open(url, "_blank");
+                                    }}
+                                >
+                                    <FiEye className="w-4 h-4 mr-2" />
+                                    Preview Survey
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full justify-start hover:bg-green-50 hover:border-green-200 hover:text-green-700 transition-colors"
+                                    onClick={() => {
+                                        router.get(
+                                            "/survey/board",
+                                            { form_uid: form.main.form_uid },
+                                            { preserveState: true }
+                                        );
+                                    }}
+                                >
+                                    <FiBarChart2 className="w-4 h-4 mr-2" />
+                                    View Statistics
+                                </Button>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </Layout>
+            </div>
         </div>
+    );
+}
+
+export default function Edit({ form }) {
+    return (
+        <FormProvider initialMode="edit" initialForm={form}>
+            <EditContent form={form} />
+        </FormProvider>
     );
 }

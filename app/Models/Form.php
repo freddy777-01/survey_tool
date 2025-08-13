@@ -17,4 +17,9 @@ class Form extends Model
         'begin_date',
         'end_date'
     ];
+
+    public function responses()
+    {
+        return $this->hasMany(Response::class);
+    }
 }

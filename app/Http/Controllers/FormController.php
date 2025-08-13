@@ -6,6 +6,7 @@ use App\Models\Answer;
 use App\Models\Form;
 use App\Models\Question;
 use App\Models\Section;
+use App\Models\Response;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -38,6 +39,26 @@ class FormController extends Controller
                 $question['answers'] = $answers;
                 return $question;
             });
+            $form['participants'] = Response::where('form_id', $form['id'])->count();
+
+
+
+            // compute timeline-based state
+            $now = \Carbon\Carbon::now()->startOfDay();
+            $begin = $form['begin_date'] ? \Carbon\Carbon::parse($form['begin_date']) : null;
+            $end = $form['end_date'] ? \Carbon\Carbon::parse($form['end_date']) : null;
+            $state = 'unknown';
+            if ($begin && $end) {
+                if ($now->between($begin, $end, true)) {
+                    $state = 'active';
+                } elseif ($now->lt($begin)) {
+                    $state = 'upcoming';
+                } elseif ($now->gt($end)) {
+                    $state = 'expired';
+                }
+            }
+            $form['state'] = $state;
+            // keep existing status field, but prefer computed state for UI
             $form['sections'] = $sections;
             $form['questions'] = $questions;
             return $form;
@@ -57,43 +78,59 @@ class FormController extends Controller
     {
         $form_uid = $form['form_uid'];
         $form_id = Form::where('form_uid', $form_uid)->value('id');
+        // dd($form_uid);
         if (count($form['sections']) > 0) {
             foreach ($form['sections'] as $key => $s) {
 
                 /* foreach ($form['questions'] as $key => $q) {
-                    if (Section::where('section_uid', $s['id'])->exists()) {
-                        if ($s['id'] == $q['section']) {
-                            if (Question::where('form_id', Form::where('form_uid', $form_uid)->value('id'))->Where('section_id', Section::where('section_uid', $s['id'])->value('id'))->exists()) {
-                                if (Answer::where('question_id', Question::where('form_id', Form::where('form_uid', $form_uid)->value('id'))->orWhere('section_id', Section::where('section_uid', $s['id'])->value('id'))->value('id'))->delete() > 0) {
+                        if (Section::where('section_uid', $s['id'])->exists()) {
+                            if ($s['id'] == $q['section']) {
+                                if (Question::where('form_id', Form::where('form_uid', $form_uid)->value('id'))->Where('section_id', Section::where('section_uid', $s['id'])->value('id'))->exists()) {
+                                    if (Answer::where('question_id', Question::where('form_id', Form::where('form_uid', $form_uid)->value('id'))->orWhere('section_id', Section::where('section_uid', $s['id'])->value('id'))->value('id'))->delete() > 0) {
 
-                                    Question::where('form_id', Form::where('form_uid', $form_uid)->value('id'))->Where('section_id', Section::where('section_uid', $s['id'])->value('id'))->delete();
+                                        Question::where('form_id', Form::where('form_uid', $form_uid)->value('id'))->Where('section_id', Section::where('section_uid', $s['id'])->value('id'))->delete();
+                                    }
                                 }
                             }
+                            Section::where('section_uid', $s['id'])->delete();
                         }
-                        Section::where('section_uid', $s['id'])->delete();
-                    }
-                } */
-                $section_id = Section::where('section_uid', $s['id'])->value('id');
+                    } */
+                $section_id = Section::where('section_uid', $s['section_uid'])->value('id');
+                // dd($s['section_uid']);
                 if ($section_id) {
-                    // Find all questions in this section
+                    // questions in all sections
                     $questions = Question::where('form_id', $form_id)
                         ->where('section_id', $section_id)
                         ->get();
 
                     foreach ($questions as $question) {
-                        // Delete answers for each question
+                        // dd($question->id);
+                        //  answers for each question
                         Answer::where('question_id', $question->id)->delete();
                     }
 
-                    // Now delete questions
+                    //  delete questions
                     Question::where('form_id', $form_id)
                         ->where('section_id', $section_id)
                         ->delete();
 
-                    // Finally, delete the section
-                    Section::where('section_uid', $s['id'])->delete();
+                    //  delete the section
+                    Section::where('section_uid', $s['section_uid'])->delete();
                 }
             }
+        } else {
+            $questions = Question::where('form_id', $form_id)
+                ->get();
+
+            foreach ($questions as $question) {
+                // dd($question->id);
+                //  answers for each question
+                Answer::where('question_id', $question->id)->delete();
+            }
+
+            //  delete questions
+            Question::where('form_id', $form_id)
+                ->delete();
         }
     }
 
@@ -102,6 +139,9 @@ class FormController extends Controller
 
         // dd($request->all());
         $form = $request->all();
+        // normalize optional dates
+        $beginDate = $form['begin_date'] ?? null;
+        $endDate = $form['end_date'] ?? null;
         $this->removeCurrentFormDetails($form);
         // $newForm = new Form();
         try {
@@ -120,6 +160,8 @@ class FormController extends Controller
                     'description' => $form['description'],
                     'published' => 0,
                     'status' => 'inactive',
+                    'begin_date' => $beginDate,
+                    'end_date' => $endDate,
                     'form_uid' => $form['form_uid'],
                 ]
             );
@@ -129,20 +171,20 @@ class FormController extends Controller
 
                 foreach ($form['sections'] as $key => $s) {
                     //Deleting available sections and questions
-                    if (Section::where('section_uid', $s['id'])->exists()) {
+                    if (Section::where('section_uid', $s['section_uid'])->exists()) {
 
-                        Section::where('section_uid', $s['id'])->delete();
+                        Section::where('section_uid', $s['section_uid'])->delete();
                     }
                     $section = new Section();
 
                     $section->name = $s['name'];
-                    $section->section_uid = $s['id'];
+                    $section->section_uid = $s['section_uid'];
                     $section->form_id = $newForm->id;
                     if ($section->save()) {
                         foreach ($form['questions'] as $q) {
                             // $question = new Question();
                             $answer = new Answer();
-                            if ($s['id'] == $q['section']) {
+                            if ($s['section_uid'] == $q['section_uid']) {
 
                                 $question = Question::updateOrCreate(
                                     ['question_uid' => $q['question_uid']],
@@ -151,7 +193,7 @@ class FormController extends Controller
                                         'description' => $q['description'],
                                         'form_id' => $newForm->id,
                                         'section_id' => $section->id,
-                                        'question_uid' => $q['id']
+                                        'question_uid' => $q['question_uid']
                                     ]
                                 );
                                 $answer->type = $q['answer']['type'];
@@ -166,13 +208,13 @@ class FormController extends Controller
                 foreach ($form['questions'] as $q) {
                     // $question = new Question();
                     $question = Question::updateOrCreate(
-                        ['question_uid' => $q['id']],
+                        ['question_uid' => $q['question_uid']],
                         [
                             'question' => $q['question'],
                             'description' => $q['description'],
                             'form_id' => $newForm->id,
                             // 'section_id' => $section->id,
-                            'question_uid' => $q['id']
+                            'question_uid' => $q['question_uid']
                         ]
                     );
 
@@ -191,6 +233,7 @@ class FormController extends Controller
             return redirect()->back();
         } catch (\Throwable $th) {
             DB::rollBack();
+            // dd($th);
             return redirect()->back()->withErrors(['error' => $th->getMessage()]);
         }
     }
@@ -233,8 +276,68 @@ class FormController extends Controller
     {
         $form_uid = $request->query('form_uid');
         $formDetail = Form::where("form_uid", $form_uid)->first(['id', 'form_uid', 'name', 'description', 'published', 'status', 'begin_date', 'end_date']);
+        $participants = Response::where('form_id', $formDetail['id'])->count();
 
-        return Inertia::render('Survey/Board', ['form' => $formDetail]);
+        return Inertia::render('Survey/Board', ['form' => $formDetail, 'participants' => $participants]);
+    }
+
+    public function attend(Request $request)
+    {
+        $form_uid = $request->query('form_uid');
+        $formDetail = Form::where("form_uid", $form_uid)->first(['id', 'form_uid', 'name', 'description', 'published', 'status', 'begin_date', 'end_date']);
+        if (!$formDetail) {
+            abort(404);
+        }
+
+        // Check if survey is published and active
+        if (!$formDetail->published || $formDetail->status !== 'active') {
+            abort(403, 'This survey is not available for participation.');
+        }
+
+        // Check if survey is within timeline
+        $now = \Carbon\Carbon::now()->startOfDay();
+        $begin = $formDetail->begin_date ? \Carbon\Carbon::parse($formDetail->begin_date) : null;
+        $end = $formDetail->end_date ? \Carbon\Carbon::parse($formDetail->end_date) : null;
+
+        if ($begin && $end && !$now->between($begin, $end, true)) {
+            abort(403, 'This survey is not currently active.');
+        }
+
+        $sections = Section::where('form_id', $formDetail['id'])->get(['id', 'name', 'section_uid', 'form_id']);
+        $questions = Question::where('form_id', $formDetail['id'])->get(['id', 'question_uid', 'question', 'description', 'form_id', 'section_id'])->map(function ($question) {
+            $answer = Answer::where('question_id', $question['id'])->first(['id', 'type', 'structure', 'question_id']);
+            if ($answer) {
+                $answer['structure'] = json_decode($answer['structure']);
+                $question['answer'] = $answer;
+            } else {
+                // Handle questions without answer records
+                $question['answer'] = null;
+            }
+
+            // Debug logging
+            \Illuminate\Support\Facades\Log::info("Question structure for question {$question['id']}:", [
+                'question' => $question['question'],
+                'answer' => $question['answer'],
+                'answer_type' => $question['answer']['type'] ?? 'null',
+                'structure' => $question['answer']['structure'] ?? 'null'
+            ]);
+
+            return $question;
+        });
+        if (count($sections) > 0) {
+            $sections = $sections->map(function ($section) use ($questions) {
+                $section['questions'] = $questions->filter(function ($question) use ($section) {
+                    return $question['section_id'] == $section['id'];
+                })->values();
+                return $section;
+            });
+        } else {
+            $sections = [];
+        }
+
+        return Inertia::render('Survey/Attend', [
+            'form' => ['main' => $formDetail, 'sections' => $sections, 'questions' => $questions],
+        ]);
     }
 
     function editView(Request $request)
@@ -270,5 +373,61 @@ class FormController extends Controller
     {
 
         dd("About to editing form ");
+    }
+
+    public function publish(Request $request)
+    {
+        $validated = $request->validate([
+            'form_uid' => 'required|numeric|exists:forms,form_uid',
+            'begin_date' => 'required|date',
+            'end_date' => 'required|date|after:begin_date',
+        ]);
+
+        $form = Form::where('form_uid', $validated['form_uid'])->firstOrFail();
+
+        // Check if this is a republish (form was previously published)
+        $isRepublish = $form->published == 1;
+
+        // For republish, ensure timeline has changed
+        if ($isRepublish) {
+            $timelineChanged = $form->begin_date != $validated['begin_date'] ||
+                $form->end_date != $validated['end_date'];
+            if (!$timelineChanged) {
+                return response()->json([
+                    'error' => 'To republish, you must change the timeline (start or end date)'
+                ], 422);
+            }
+        }
+
+        $form->update([
+            'published' => 1,
+            'status' => 'active',
+            'begin_date' => $validated['begin_date'],
+            'end_date' => $validated['end_date'],
+        ]);
+
+        return response()->json([
+            'message' => $isRepublish ? 'Survey republished successfully' : 'Survey published successfully',
+            'form' => $form->fresh()
+        ]);
+    }
+
+    public function unpublish(Request $request)
+    {
+        $validated = $request->validate([
+            'form_uid' => 'required|numeric|exists:forms,form_uid',
+        ]);
+
+        $form = Form::where('form_uid', $validated['form_uid'])->firstOrFail();
+
+        $form->update([
+            'published' => 0,
+            'status' => 'inactive',
+        ]);
+
+        return response()->json([
+            'message' => 'Survey unpublished successfully',
+            'form' => $form->fresh()
+        ]);
     }
 }

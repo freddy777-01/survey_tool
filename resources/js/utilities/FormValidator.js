@@ -62,14 +62,45 @@ export function ValidatorForm(form) {
             }
         }
         if (question.answer.type === "likert_scale") {
-            if (
-                !question.answer.structure ||
-                (Array.isArray(question.answer.structure) &&
-                    question.answer.structure.length === 0) ||
-                (typeof question.answer.structure === "object" &&
-                    (!question.answer.structure.options ||
-                        question.answer.structure.options.length === 0))
+            console.log("Validating Likert scale question:", question);
+            console.log("Structure type:", typeof question.answer.structure);
+            console.log(
+                "Structure is array:",
+                Array.isArray(question.answer.structure)
+            );
+            console.log("Structure length:", question.answer.structure?.length);
+
+            // For simple Likert scale (array format)
+            if (Array.isArray(question.answer.structure)) {
+                if (
+                    !question.answer.structure ||
+                    question.answer.structure.length === 0
+                ) {
+                    return {
+                        valid: false,
+                        message:
+                            "Options are required for Likert scale questions.",
+                    };
+                }
+            }
+            // For table Likert scale (object format with statements and options)
+            else if (
+                typeof question.answer.structure === "object" &&
+                question.answer.structure !== null
             ) {
+                if (
+                    !question.answer.structure.options ||
+                    question.answer.structure.options.length === 0
+                ) {
+                    return {
+                        valid: false,
+                        message:
+                            "Options are required for Likert scale questions.",
+                    };
+                }
+            }
+            // If structure is null, undefined, or invalid
+            else {
                 return {
                     valid: false,
                     message: "Options are required for Likert scale questions.",

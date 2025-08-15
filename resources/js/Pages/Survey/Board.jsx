@@ -381,12 +381,41 @@ export default function Board({ form, participants: initialParticipants = 0 }) {
                     {perQuestion.length > 0 ? (
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                             {perQuestion.map((q, index) => {
-                                const labels = Object.keys(q.counts || {});
-                                const values = Object.values(q.counts || {});
-                                const totalResponses = values.reduce(
-                                    (sum, val) => sum + val,
-                                    0
-                                );
+                                // Handle different question types
+                                let labels = [];
+                                let values = [];
+                                let totalResponses = 0;
+
+                                if (q.type === "likert_scale") {
+                                    // Handle Likert scale questions
+                                    if (q.likert_stats.simple) {
+                                        // Simple Likert scale
+                                        labels = Object.keys(
+                                            q.likert_stats.simple
+                                        );
+                                        values = Object.values(
+                                            q.likert_stats.simple
+                                        );
+                                        totalResponses = values.reduce(
+                                            (sum, val) => sum + val,
+                                            0
+                                        );
+                                    } else {
+                                        // Table Likert scale - show per-statement breakdown
+                                        // We'll handle this separately in the render logic
+                                        labels = [];
+                                        values = [];
+                                        totalResponses = 0;
+                                    }
+                                } else {
+                                    // Handle regular questions
+                                    labels = Object.keys(q.counts || {});
+                                    values = Object.values(q.counts || {});
+                                    totalResponses = values.reduce(
+                                        (sum, val) => sum + val,
+                                        0
+                                    );
+                                }
 
                                 // Doughnut chart data
                                 const doughnutData = {
@@ -492,7 +521,204 @@ export default function Board({ form, participants: initialParticipants = 0 }) {
                                             </p>
                                         </div>
 
-                                        {values.length > 0 ? (
+                                        {q.type === "likert_scale" &&
+                                        !q.likert_stats.simple ? (
+                                            // Table Likert scale - show detailed breakdown
+                                            <div className="space-y-6">
+                                                {/* Summary Statistics */}
+                                                <div className="bg-white p-4 rounded-lg border">
+                                                    <h4 className="font-medium text-gray-900 mb-3">
+                                                        Response Summary
+                                                    </h4>
+                                                    <div className="grid grid-cols-2 gap-4 text-sm">
+                                                        <div>
+                                                            <span className="text-gray-600">
+                                                                Total
+                                                                Statements:
+                                                            </span>
+                                                            <span className="ml-2 font-medium">
+                                                                {
+                                                                    Object.keys(
+                                                                        q.likert_stats
+                                                                    ).length
+                                                                }
+                                                            </span>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-gray-600">
+                                                                Total Responses:
+                                                            </span>
+                                                            <span className="ml-2 font-medium">
+                                                                {q.total}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Per-Statement Breakdown */}
+                                                <div className="space-y-4">
+                                                    <h4 className="font-medium text-gray-900">
+                                                        Per-Statement Responses
+                                                    </h4>
+                                                    {Object.keys(
+                                                        q.likert_stats
+                                                    ).map(
+                                                        (
+                                                            statementId,
+                                                            index
+                                                        ) => {
+                                                            const statementResponses =
+                                                                q.likert_stats[
+                                                                    statementId
+                                                                ];
+                                                            const statementLabels =
+                                                                Object.keys(
+                                                                    statementResponses
+                                                                );
+                                                            const statementValues =
+                                                                Object.values(
+                                                                    statementResponses
+                                                                );
+                                                            const statementTotal =
+                                                                statementValues.reduce(
+                                                                    (
+                                                                        sum,
+                                                                        val
+                                                                    ) =>
+                                                                        sum +
+                                                                        val,
+                                                                    0
+                                                                );
+
+                                                            const statementData =
+                                                                {
+                                                                    labels: statementLabels,
+                                                                    datasets: [
+                                                                        {
+                                                                            data: statementValues,
+                                                                            backgroundColor:
+                                                                                [
+                                                                                    "#3B82F6",
+                                                                                    "#10B981",
+                                                                                    "#F59E0B",
+                                                                                    "#EF4444",
+                                                                                    "#8B5CF6",
+                                                                                ],
+                                                                            borderWidth: 2,
+                                                                            borderColor:
+                                                                                "#ffffff",
+                                                                        },
+                                                                    ],
+                                                                };
+
+                                                            return (
+                                                                <div
+                                                                    key={
+                                                                        statementId
+                                                                    }
+                                                                    className="bg-white p-4 rounded-lg border"
+                                                                >
+                                                                    <h5 className="font-medium text-gray-800 mb-2">
+                                                                        Statement{" "}
+                                                                        {index +
+                                                                            1}
+                                                                    </h5>
+                                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                        <div className="h-48">
+                                                                            <Doughnut
+                                                                                data={
+                                                                                    statementData
+                                                                                }
+                                                                                options={{
+                                                                                    responsive: true,
+                                                                                    maintainAspectRatio: false,
+                                                                                    plugins:
+                                                                                        {
+                                                                                            legend: {
+                                                                                                position:
+                                                                                                    "bottom",
+                                                                                                labels: {
+                                                                                                    padding: 10,
+                                                                                                    usePointStyle: true,
+                                                                                                },
+                                                                                            },
+                                                                                            tooltip:
+                                                                                                {
+                                                                                                    callbacks:
+                                                                                                        {
+                                                                                                            label: function (
+                                                                                                                context
+                                                                                                            ) {
+                                                                                                                const percentage =
+                                                                                                                    statementTotal >
+                                                                                                                    0
+                                                                                                                        ? (
+                                                                                                                              (context.parsed /
+                                                                                                                                  statementTotal) *
+                                                                                                                              100
+                                                                                                                          ).toFixed(
+                                                                                                                              1
+                                                                                                                          )
+                                                                                                                        : 0;
+                                                                                                                return `${context.label}: ${context.parsed} (${percentage}%)`;
+                                                                                                            },
+                                                                                                        },
+                                                                                                },
+                                                                                        },
+                                                                                }}
+                                                                            />
+                                                                        </div>
+                                                                        <div className="space-y-2">
+                                                                            {statementLabels.map(
+                                                                                (
+                                                                                    label,
+                                                                                    i
+                                                                                ) => (
+                                                                                    <div
+                                                                                        key={
+                                                                                            label
+                                                                                        }
+                                                                                        className="flex justify-between items-center text-sm"
+                                                                                    >
+                                                                                        <span className="text-gray-600">
+                                                                                            {
+                                                                                                label
+                                                                                            }
+                                                                                            :
+                                                                                        </span>
+                                                                                        <span className="font-medium">
+                                                                                            {
+                                                                                                statementValues[
+                                                                                                    i
+                                                                                                ]
+                                                                                            }{" "}
+                                                                                            responses
+                                                                                        </span>
+                                                                                    </div>
+                                                                                )
+                                                                            )}
+                                                                            <div className="border-t pt-2 mt-2">
+                                                                                <div className="flex justify-between items-center text-sm font-medium">
+                                                                                    <span>
+                                                                                        Total:
+                                                                                    </span>
+                                                                                    <span>
+                                                                                        {
+                                                                                            statementTotal
+                                                                                        }{" "}
+                                                                                        responses
+                                                                                    </span>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        }
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ) : values.length > 0 ? (
                                             <div className="space-y-6">
                                                 {/* Doughnut Chart */}
                                                 <div className="h-64">

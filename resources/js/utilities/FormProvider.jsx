@@ -67,7 +67,6 @@ function FormProvider({
 
             setFormSavedStatus(true);
             setIsInitialized(true);
-            // console.log("Loaded form for editing:", initialForm.main.form_uid);
         } else if (initialMode === "preview" && initialForm) {
             // Preview mode: load form data for read-only display
             setFormUID(initialForm.form.form_uid);
@@ -75,7 +74,13 @@ function FormProvider({
             setFormDescription(initialForm.form.description || "");
             setBeginDate(initialForm.form.begin_date || "");
             setEndDate(initialForm.form.end_date || "");
-            setFormQuestions(initialForm.questions || []);
+
+            // Create a deep copy to prevent mutation
+            const questionsCopy = JSON.parse(
+                JSON.stringify(initialForm.questions || [])
+            );
+
+            setFormQuestions(questionsCopy);
 
             if (initialForm.sections && initialForm.sections.length > 0) {
                 const processedSections = initialForm.sections.map(
@@ -93,14 +98,15 @@ function FormProvider({
 
             setFormSavedStatus(true);
             setIsInitialized(true);
-            // console.log("Loaded form for preview:", initialForm.form.form_uid);
+        } else if (initialMode === "preview" && !initialForm) {
+            // Preview mode but initialForm is not available yet - wait for it
+            return;
         }
     }, [initialMode, initialForm]);
 
     // Update localStorage only for create and edit modes, not preview
     React.useEffect(() => {
         if (formMode === "preview") {
-            // console.log("Preview mode - not saving to localStorage");
             return;
         }
 
@@ -130,10 +136,21 @@ function FormProvider({
         formMode,
     ]);
 
-    // Track changes and reset saved status for edit mode
+    // Prevent localStorage from overriding backend data in preview mode
     React.useEffect(() => {
-        if (formMode === "edit" && isInitialized && formSavedStatus) {
-            // console.log("Form changed in edit mode - resetting saved status");
+        if (formMode === "preview" && formUID && formUID !== "") {
+            // Clear any existing localStorage data for this form in preview mode
+            localStorage.removeItem(formUID);
+        }
+    }, [formMode, formUID]);
+
+    // Track changes and reset saved status for both create and edit modes
+    React.useEffect(() => {
+        if (formMode === "create" && formSavedStatus) {
+            // For create mode, reset saved status when form changes
+            setFormSavedStatus(false);
+        } else if (formMode === "edit" && isInitialized && formSavedStatus) {
+            // For edit mode, reset saved status when form changes
             setFormSavedStatus(false);
         }
     }, [
@@ -166,6 +183,9 @@ function FormProvider({
 
     // Form Questions
     const getFormQuestions = () => formQuestions;
+
+    // Form Initialization Status
+    const getIsInitialized = () => isInitialized;
 
     // Form Mode
     const getFormMode = () => formMode;
@@ -240,6 +260,7 @@ function FormProvider({
     };
 
     const removeSectionFromQuestion = (sectionId) => {
+        // console.log(sectionId);
         let updateQuestions = formQuestions.map((question) => {
             if (sectionId == question.section_uid) {
                 question.section_uid = "";
@@ -247,6 +268,25 @@ function FormProvider({
             return question;
         });
         setFormQuestions(updateQuestions);
+
+        // Force update the saved status to false to ensure changes are saved
+        setFormSavedStatus(false);
+
+        // Immediately update localStorage with the updated questions
+        if (formUID && formUID !== "" && formMode !== "preview") {
+            let form = {
+                form_uid: formUID,
+                title: formTitle,
+                description: formDescription,
+                begin_date: beginDate,
+                end_date: endDate,
+                sections: sections,
+                questions: updateQuestions,
+                mode: formMode,
+            };
+            localStorage.setItem(formUID, JSON.stringify(form));
+            setFormState(form);
+        }
     };
     const removeSection = (sectionId) => {
         let newSections = sections.filter(
@@ -254,6 +294,25 @@ function FormProvider({
         );
         setSections(newSections);
         removeSectionFromQuestion(sectionId);
+
+        // Force update the saved status to false to ensure changes are saved
+        setFormSavedStatus(false);
+
+        // Immediately update localStorage with the new sections
+        /* if (formUID && formUID !== "" && formMode !== "preview") {
+            let form = {
+                form_uid: formUID,
+                title: formTitle,
+                description: formDescription,
+                begin_date: beginDate,
+                end_date: endDate,
+                sections: newSections,
+                questions: formQuestions,
+                mode: formMode,
+            };
+            localStorage.setItem(formUID, JSON.stringify(form));
+            setFormState(form);
+        } */
     };
 
     const checkEmptySections = () => {
@@ -421,8 +480,6 @@ function FormProvider({
         answerStructure
     ) => {
         // changes question's answer structure, maintains qn's ans structures that are alike.
-        // console.log("Ans type : " + answerStructureType);
-        // console.log("Ans structure type : " + answerStructureType);
 
         let updatedQuestions = formQuestions.map((q) => {
             if (q.question_uid === questionId) {
@@ -467,6 +524,7 @@ function FormProvider({
                 changeChoiceLabel,
                 changeAnswerStructure,
                 getFormQuestions, // should also check if questions are available before saving the form
+                getIsInitialized, // check if FormProvider is initialized
                 //dealing with sections
                 addSection,
                 getSections: () => sections,

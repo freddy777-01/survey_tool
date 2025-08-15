@@ -27,9 +27,7 @@ function PreviewContent({ form }) {
     const formContext = React.useContext(FormContext);
     const formMode = formContext.getFormMode();
 
-    console.log("Preview component initialized with form:", form);
-    console.log("Form mode:", formMode);
-
+    // Use the fresh data from the backend instead of localStorage
     let formState = form;
 
     return (
@@ -82,11 +80,11 @@ function PreviewContent({ form }) {
                             <FiFileText className="w-8 h-8 text-blue-600" />
                         </div>
                         <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                            {formState.form.name}
+                            {formState.title}
                         </h2>
-                        {formState.form.description && (
+                        {formState.description && (
                             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                                {formState.form.description}
+                                {formState.description}
                             </p>
                         )}
                     </div>
@@ -102,9 +100,7 @@ function PreviewContent({ form }) {
                                     Status
                                 </p>
                                 <p className="text-lg font-semibold text-gray-900">
-                                    {formState.form.published
-                                        ? "Published"
-                                        : "Draft"}
+                                    Draft
                                 </p>
                             </div>
                         </div>
@@ -132,12 +128,11 @@ function PreviewContent({ form }) {
                                     Timeline
                                 </p>
                                 <p className="text-lg font-semibold text-gray-900">
-                                    {formState.form.begin_date &&
-                                    formState.form.end_date
+                                    {formState.begin_date && formState.end_date
                                         ? `${moment(
-                                              formState.form.begin_date
+                                              formState.begin_date
                                           ).format("MMM DD")} - ${moment(
-                                              formState.form.end_date
+                                              formState.end_date
                                           ).format("MMM DD, YYYY")}`
                                         : "Not set"}
                                 </p>
@@ -273,56 +268,41 @@ function PreviewContent({ form }) {
                                                         )}
                                                         {question.answer
                                                             .type ===
-                                                            "likert_scale" && (
-                                                            <>
-                                                                {/* Table Likert Scale */}
-                                                                {question.answer
-                                                                    .structure &&
-                                                                    question
-                                                                        .answer
-                                                                        .structure
-                                                                        .statements &&
-                                                                    question
-                                                                        .answer
-                                                                        .structure
-                                                                        .options && (
-                                                                        <TableLikertScale
-                                                                            choice={
-                                                                                question
-                                                                                    .answer
-                                                                                    .type
-                                                                            }
-                                                                            questionId={
-                                                                                question.question_uid
-                                                                            }
-                                                                            formMode={
-                                                                                formMode
-                                                                            }
-                                                                        />
-                                                                    )}
-
-                                                                {/* Simple Likert Scale */}
-                                                                {Array.isArray(
-                                                                    question
-                                                                        .answer
-                                                                        .structure
-                                                                ) && (
-                                                                    <SimpleLikertScale
-                                                                        choice={
-                                                                            question
-                                                                                .answer
-                                                                                .type
-                                                                        }
-                                                                        questionId={
-                                                                            question.question_uid
-                                                                        }
-                                                                        formMode={
-                                                                            formMode
-                                                                        }
-                                                                    />
-                                                                )}
-                                                            </>
-                                                        )}
+                                                            "likert_scale" &&
+                                                            // Check if it's a simple or table Likert scale
+                                                            (question.answer
+                                                                .structure &&
+                                                            question.answer
+                                                                .structure
+                                                                .statements ? (
+                                                                <TableLikertScale
+                                                                    choice={
+                                                                        question
+                                                                            .answer
+                                                                            .type
+                                                                    }
+                                                                    questionId={
+                                                                        question.question_uid
+                                                                    }
+                                                                    formMode={
+                                                                        formMode
+                                                                    }
+                                                                />
+                                                            ) : (
+                                                                <SimpleLikertScale
+                                                                    questionId={
+                                                                        question.question_uid
+                                                                    }
+                                                                    choice={
+                                                                        question
+                                                                            .answer
+                                                                            .type
+                                                                    }
+                                                                    formMode={
+                                                                        formMode
+                                                                    }
+                                                                />
+                                                            ))}
                                                     </div>
                                                 </div>
                                             )
@@ -357,14 +337,44 @@ function PreviewContent({ form }) {
                                     </div>
 
                                     <div className="ml-12">
-                                        <Question
-                                            questionChoice={
-                                                question.answer.type
-                                            }
-                                            question={question}
-                                            formMode={formMode}
-                                            questionId={question.question_uid}
-                                        />
+                                        {question.answer.type ===
+                                        "likert_scale" ? (
+                                            // Check if it's a simple or table Likert scale
+                                            question.answer.structure &&
+                                            question.answer.structure
+                                                .statements ? (
+                                                <TableLikertScale
+                                                    choice={
+                                                        question.answer.type
+                                                    }
+                                                    questionId={
+                                                        question.question_uid
+                                                    }
+                                                    formMode={formMode}
+                                                />
+                                            ) : (
+                                                <SimpleLikertScale
+                                                    questionId={
+                                                        question.question_uid
+                                                    }
+                                                    choice={
+                                                        question.answer.type
+                                                    }
+                                                    formMode={formMode}
+                                                />
+                                            )
+                                        ) : (
+                                            <Question
+                                                questionChoice={
+                                                    question.answer.type
+                                                }
+                                                question={question}
+                                                formMode={formMode}
+                                                questionId={
+                                                    question.question_uid
+                                                }
+                                            />
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -384,7 +394,7 @@ function PreviewContent({ form }) {
                                 onClick={() => {
                                     router.get(
                                         "/survey/attend",
-                                        { form_uid: formState.form.form_uid },
+                                        { form_uid: formState.form_uid },
                                         { preserveState: true }
                                     );
                                 }}

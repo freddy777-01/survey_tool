@@ -6,72 +6,145 @@ import moment from "moment";
 
 // Utility function to generate unique IDs
 let idCounter = 0;
-const generateUniqueId = () => {
+const generateUniqueId = (l) => {
     idCounter += 1;
-    return moment().valueOf() + idCounter;
+    return moment().valueOf() + idCounter + l;
 };
 
 export default function TableLikertScale({ questionId, choice, formMode }) {
     const formContext = React.useContext(FormContext);
+    const [isInitialized, setIsInitialized] = React.useState(false);
 
-    const [statements, setStatements] = React.useState([
-        { id: generateUniqueId(), text: "Statement 1" },
-    ]);
+    const [statements, setStatements] = React.useState([]);
+    const [likertOptions, setLikertOptions] = React.useState([]);
 
-    const [likertOptions, setLikertOptions] = React.useState([
-        {
-            id: generateUniqueId(),
-            name: "strongly_agree",
-            value: "Strongly Agree",
-        },
-        { id: generateUniqueId(), name: "agree", value: "Agree" },
-        { id: generateUniqueId(), name: "neutral", value: "Neutral" },
-        { id: generateUniqueId(), name: "disagree", value: "Disagree" },
-        {
-            id: generateUniqueId(),
-            name: "strongly_disagree",
-            value: "Strongly Disagree",
-        },
-    ]);
+    // Load existing structure when component mounts or structure changes
+    React.useEffect(() => {
+        const isInitialized = formContext.getIsInitialized();
+        const questions = formContext.getFormQuestions();
+
+        const question = questions.find((q) => q.question_uid === questionId);
+
+        if (!question || !question.answer || !question.answer.structure) {
+            return;
+        }
+
+        // Initialize variables outside the if block
+        let foundStatements = null;
+        let foundOptions = null;
+
+        // Load statements - try different possible structures
+        if (
+            question.answer.structure.statements &&
+            Array.isArray(question.answer.structure.statements)
+        ) {
+            foundStatements = question.answer.structure.statements;
+        } else if (
+            question.answer.structure.s &&
+            Array.isArray(question.answer.structure.s)
+        ) {
+            // Handle optimized structure format
+            foundStatements = question.answer.structure.s.map((item) => ({
+                id: item.id || generateUniqueId(1),
+                text: item.t || item.text || "Statement",
+            }));
+        } else if (Array.isArray(question.answer.structure)) {
+            // Handle case where structure is a direct array
+            foundStatements = question.answer.structure.map((item, index) => ({
+                id: item.id || generateUniqueId(index + 1),
+                text: item.text || item.t || `Statement ${index + 1}`,
+            }));
+        }
+
+        if (foundStatements && foundStatements.length > 0) {
+            setStatements(foundStatements);
+        }
+
+        // Load options - try different possible structures
+        if (
+            question.answer.structure.options &&
+            Array.isArray(question.answer.structure.options)
+        ) {
+            foundOptions = question.answer.structure.options;
+        } else if (
+            question.answer.structure.o &&
+            Array.isArray(question.answer.structure.o)
+        ) {
+            // Handle optimized structure format
+            foundOptions = question.answer.structure.o.map((item) => ({
+                id: item.id || generateUniqueId(1),
+                name: item.name || "option",
+                value: item.v || item.value || "Option",
+            }));
+        }
+
+        if (foundOptions && foundOptions.length > 0) {
+            setLikertOptions(foundOptions);
+        }
+
+        // Mark as initialized after loading data
+        setIsInitialized(true);
+    }, [questionId, formMode, formContext.getFormQuestions()?.length]);
 
     React.useEffect(() => {
+        // Only update after initialization to prevent overwriting loaded data
+        if (!isInitialized) {
+            return;
+        }
+
+        // Ensure statements and likertOptions are arrays before passing to changeAnswerStructure
+        const safeStatements = Array.isArray(statements) ? statements : [];
+        const safeLikertOptions = Array.isArray(likertOptions)
+            ? likertOptions
+            : [];
+
         formContext.changeAnswerStructure(questionId, choice, {
-            statements: statements,
-            options: likertOptions,
+            statements: safeStatements,
+            options: safeLikertOptions,
         });
-    }, [choice, statements, likertOptions, questionId]);
+    }, [choice, statements, likertOptions, questionId, isInitialized]);
 
     const addStatement = () => {
+        const currentStatements = Array.isArray(statements) ? statements : [];
         const newStatement = {
-            id: generateUniqueId(),
-            text: `Statement ${statements.length + 1}`,
+            id: generateUniqueId(1),
+            text: `Statement ${currentStatements.length + 1}`,
         };
-        setStatements([...statements, newStatement]);
+        const updatedStatements = [...currentStatements, newStatement];
+        setStatements(updatedStatements);
     };
 
     const removeStatement = (statementId) => {
-        setStatements(statements.filter((stmt) => stmt.id !== statementId));
+        if (Array.isArray(statements)) {
+            setStatements(statements.filter((stmt) => stmt.id !== statementId));
+        }
     };
 
     const updateStatement = (statementId, newText) => {
-        setStatements(
-            statements.map((stmt) =>
-                stmt.id === statementId ? { ...stmt, text: newText } : stmt
-            )
-        );
+        if (Array.isArray(statements)) {
+            setStatements(
+                statements.map((stmt) =>
+                    stmt.id === statementId ? { ...stmt, text: newText } : stmt
+                )
+            );
+        }
     };
 
     const addLikertOption = () => {
+        const currentOptions = Array.isArray(likertOptions)
+            ? likertOptions
+            : [];
         const newOption = {
-            id: generateUniqueId(),
-            name: `option_${likertOptions.length + 1}`,
-            value: `Option ${likertOptions.length + 1}`,
+            id: generateUniqueId(1),
+            name: `option_${currentOptions.length + 1}`,
+            value: `Option ${currentOptions.length + 1}`,
+            checked: false,
         };
-        setLikertOptions([...likertOptions, newOption]);
+        setLikertOptions([...currentOptions, newOption]);
     };
 
     const removeLikertOption = (optionId) => {
-        if (likertOptions.length > 2) {
+        if (Array.isArray(likertOptions) && likertOptions.length > 2) {
             // Keep at least 2 options
             setLikertOptions(
                 likertOptions.filter((opt) => opt.id !== optionId)
@@ -80,11 +153,13 @@ export default function TableLikertScale({ questionId, choice, formMode }) {
     };
 
     const updateLikertOption = (optionId, newValue) => {
-        setLikertOptions(
-            likertOptions.map((opt) =>
-                opt.id === optionId ? { ...opt, value: newValue } : opt
-            )
-        );
+        if (Array.isArray(likertOptions)) {
+            setLikertOptions(
+                likertOptions.map((opt) =>
+                    opt.id === optionId ? { ...opt, value: newValue } : opt
+                )
+            );
+        }
     };
 
     if (formMode === "create" || formMode === "edit") {
@@ -96,35 +171,36 @@ export default function TableLikertScale({ questionId, choice, formMode }) {
                         Response Options
                     </h4>
                     <div className="space-y-2">
-                        {likertOptions.map((option, index) => (
-                            <div
-                                key={option.id}
-                                className="flex items-center gap-2"
-                            >
-                                <input
-                                    type="text"
-                                    value={option.value}
-                                    onChange={(e) =>
-                                        updateLikertOption(
-                                            option.id,
-                                            e.target.value
-                                        )
-                                    }
-                                    className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm"
-                                    placeholder="Option text"
-                                />
-                                {likertOptions.length > 2 && (
-                                    <button
-                                        onClick={() =>
-                                            removeLikertOption(option.id)
+                        {Array.isArray(likertOptions) &&
+                            likertOptions.map((option, index) => (
+                                <div
+                                    key={option.id}
+                                    className="flex items-center gap-2"
+                                >
+                                    <input
+                                        type="text"
+                                        value={option.value}
+                                        onChange={(e) =>
+                                            updateLikertOption(
+                                                option.id,
+                                                e.target.value
+                                            )
                                         }
-                                        className="text-red-500 hover:text-red-700"
-                                    >
-                                        <RxCross2 className="w-4 h-4" />
-                                    </button>
-                                )}
-                            </div>
-                        ))}
+                                        className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm"
+                                        placeholder="Option text"
+                                    />
+                                    {likertOptions.length > 2 && (
+                                        <button
+                                            onClick={() =>
+                                                removeLikertOption(option.id)
+                                            }
+                                            className="text-red-500 hover:text-red-700"
+                                        >
+                                            <RxCross2 className="w-4 h-4" />
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
                         <button
                             onClick={addLikertOption}
                             className="flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm"
@@ -141,38 +217,39 @@ export default function TableLikertScale({ questionId, choice, formMode }) {
                         Statements
                     </h4>
                     <div className="space-y-2">
-                        {statements.map((statement, index) => (
-                            <div
-                                key={statement.id}
-                                className="flex items-center gap-2"
-                            >
-                                <span className="text-sm text-gray-500 w-8">
-                                    {index + 1}.
-                                </span>
-                                <input
-                                    type="text"
-                                    value={statement.text}
-                                    onChange={(e) =>
-                                        updateStatement(
-                                            statement.id,
-                                            e.target.value
-                                        )
-                                    }
-                                    className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm"
-                                    placeholder="Enter statement"
-                                />
-                                {statements.length > 1 && (
-                                    <button
-                                        onClick={() =>
-                                            removeStatement(statement.id)
+                        {Array.isArray(statements) &&
+                            statements.map((statement, index) => (
+                                <div
+                                    key={statement.id}
+                                    className="flex items-center gap-2"
+                                >
+                                    <span className="text-sm text-gray-500 w-8">
+                                        {index + 1}.
+                                    </span>
+                                    <input
+                                        type="text"
+                                        value={statement.text}
+                                        onChange={(e) =>
+                                            updateStatement(
+                                                statement.id,
+                                                e.target.value
+                                            )
                                         }
-                                        className="text-red-500 hover:text-red-700"
-                                    >
-                                        <RxCross2 className="w-4 h-4" />
-                                    </button>
-                                )}
-                            </div>
-                        ))}
+                                        className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm"
+                                        placeholder="Enter statement"
+                                    />
+                                    {statements.length > 1 && (
+                                        <button
+                                            onClick={() =>
+                                                removeStatement(statement.id)
+                                            }
+                                            className="text-red-500 hover:text-red-700"
+                                        >
+                                            <RxCross2 className="w-4 h-4" />
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
                         <button
                             onClick={addStatement}
                             className="flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm"
@@ -207,7 +284,7 @@ export default function TableLikertScale({ questionId, choice, formMode }) {
                                 {statements.map((statement, index) => (
                                     <tr key={statement.id}>
                                         <td className="border border-gray-300 px-3 py-2 text-sm">
-                                            {index + 1}. {statement.text}
+                                            {statement.text}
                                         </td>
                                         {likertOptions.map((option) => (
                                             <td
@@ -256,7 +333,7 @@ export default function TableLikertScale({ questionId, choice, formMode }) {
                     {statements.map((statement, index) => (
                         <tr key={statement.id}>
                             <td className="border border-gray-300 px-3 py-2 text-sm">
-                                {index + 1}. {statement.text}
+                                {statement.text}
                             </td>
                             {likertOptions.map((option) => (
                                 <td

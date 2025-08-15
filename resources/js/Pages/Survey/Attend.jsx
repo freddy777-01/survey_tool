@@ -48,7 +48,6 @@ export default function Attend({ form }) {
     /* console.log("Attend component loaded with form:", form);
     console.log("Main form data:", main); */
     // console.log("Sections:", sections);
-    // console.log("Questions:", questions);
 
     useEffect(() => {
         setResultQuestion(questions);
@@ -125,10 +124,14 @@ export default function Attend({ form }) {
                 // For likert scale questions, check if it's table or simple format
                 const currentAnswers = prev[question_uid] || {};
 
-                // If structureId is a statement ID (table format), store per statement
-                if (structureId && structureId.toString().length > 10) {
-                    // Likely a timestamp ID
-                    return {
+                // Check if this is a table Likert scale by looking at the question structure
+                // For table Likert scales, we need to check if the question has statements
+                const question = questions.find(
+                    (q) => q.question_uid === question_uid
+                );
+                if (question && question.answer?.structure?.statements) {
+                    // Table Likert scale - store per statement
+                    const newAnswer = {
                         ...prev,
                         [question_uid]: {
                             ...currentAnswers,
@@ -136,15 +139,19 @@ export default function Attend({ form }) {
                             name: type,
                         },
                     };
+
+                    return newAnswer;
                 } else {
                     // Simple likert scale - single value
-                    return {
+                    const newAnswer = {
                         ...prev,
                         [question_uid]: {
                             value: value,
                             name: type,
                         },
                     };
+
+                    return newAnswer;
                 }
             } else {
                 // For other question types, update the single object
@@ -233,9 +240,6 @@ export default function Attend({ form }) {
             }
         });
 
-        console.log("Submitting answers:", transformedAnswers);
-        console.log("Form UID:", main.form_uid);
-
         setIsSubmitting(true);
         const payload = {
             form_uid: main.form_uid,
@@ -247,7 +251,6 @@ export default function Attend({ form }) {
 
             if (res.ok) {
                 const data = await res.json();
-                console.log("Submission successful:", data);
 
                 // Mark this survey as attended in localStorage
                 const attendedSurveys = JSON.parse(
@@ -265,13 +268,11 @@ export default function Attend({ form }) {
                 setShowThankYouModal(true);
             } else {
                 const errorData = await res.json();
-                console.error("Submission failed:", errorData);
                 alert(
                     errorData.message || "Submission failed. Please try again."
                 );
             }
         } catch (error) {
-            console.error("Submission error:", error);
             alert(
                 "Submission failed. Please check your connection and try again."
             );
@@ -427,6 +428,124 @@ export default function Attend({ form }) {
                                 ))}
                             </div>
                         )}
+                        {q.answer?.type === "likert_scale" && (
+                            <>
+                                {q.answer.structure &&
+                                q.answer.structure.statements ? (
+                                    // Table Likert Scale
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full border border-gray-300">
+                                            <thead>
+                                                <tr className="bg-gray-50">
+                                                    <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
+                                                        Statement
+                                                    </th>
+                                                    {q.answer.structure.options.map(
+                                                        (option) => (
+                                                            <th
+                                                                key={option.id}
+                                                                className="border border-gray-300 px-3 py-2 text-center text-sm font-medium text-gray-700"
+                                                            >
+                                                                {option.value}
+                                                            </th>
+                                                        )
+                                                    )}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {q.answer.structure.statements.map(
+                                                    (statement, index) => (
+                                                        <tr key={statement.id}>
+                                                            <td className="border border-gray-300 px-3 py-2 text-sm">
+                                                                {index + 1}.{" "}
+                                                                {statement.text}
+                                                            </td>
+                                                            {q.answer.structure.options.map(
+                                                                (option) => (
+                                                                    <td
+                                                                        key={
+                                                                            option.id
+                                                                        }
+                                                                        className="border border-gray-300 px-3 py-2 text-center"
+                                                                    >
+                                                                        <input
+                                                                            type="radio"
+                                                                            name={`statement_${statement.id}`}
+                                                                            value={
+                                                                                option.value
+                                                                            }
+                                                                            checked={
+                                                                                answers[
+                                                                                    q
+                                                                                        .question_uid
+                                                                                ]?.[
+                                                                                    statement
+                                                                                        .id
+                                                                                ] ===
+                                                                                option.value
+                                                                            }
+                                                                            onChange={(
+                                                                                e
+                                                                            ) => {
+                                                                                setAnswer(
+                                                                                    q.question_uid,
+                                                                                    e
+                                                                                        .target
+                                                                                        .value,
+                                                                                    statement.id,
+                                                                                    "likert_scale"
+                                                                                );
+                                                                            }}
+                                                                            className="cursor-pointer h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                                                                        />
+                                                                    </td>
+                                                                )
+                                                            )}
+                                                        </tr>
+                                                    )
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    // Simple Likert Scale
+                                    <div className="flex flex-row gap-x-5 items-center p-2 text-sm">
+                                        {q.answer.structure.map(
+                                            (scale, index) => (
+                                                <div
+                                                    className="flex gap-x-1.5"
+                                                    key={index}
+                                                >
+                                                    <input
+                                                        type="radio"
+                                                        value={scale.value}
+                                                        name={`q_${q.question_uid}`}
+                                                        checked={
+                                                            answers[
+                                                                q.question_uid
+                                                            ]?.value ===
+                                                            scale.value
+                                                        }
+                                                        onChange={(e) => {
+                                                            setAnswer(
+                                                                q.question_uid,
+                                                                e.target.value,
+                                                                scale.id,
+                                                                "likert_scale"
+                                                            );
+                                                        }}
+                                                        className="cursor-pointer h-5 w-5 border focus:outline-none border-slate-300 transition-all checked:bg-blue-300 focus:ring-1 rounded-md p-1.5"
+                                                    />
+                                                    <label className="hover:cursor-pointer">
+                                                        {scale.value}
+                                                    </label>
+                                                </div>
+                                            )
+                                        )}
+                                    </div>
+                                )}
+                            </>
+                        )}
                         {(!q.answer || !q.answer.type) && (
                             <div className="p-3 bg-red-100 border border-red-300 rounded text-red-700">
                                 <p>
@@ -577,111 +696,122 @@ export default function Attend({ form }) {
                         ))}
                     </div>
                 )}
-                {question.answer?.type === "likert_scale" &&
-                    question.answer.structure && (
-                        <>
-                            {/* Table Likert Scale */}
-                            {question.answer.structure.statements &&
-                                question.answer.structure.options && (
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full border border-gray-300">
-                                            <thead>
-                                                <tr className="bg-gray-50">
-                                                    <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
-                                                        Statement
+                {question.answer?.type === "likert_scale" && (
+                    <>
+                        {question.answer.structure &&
+                        question.answer.structure.statements ? (
+                            // Table Likert Scale
+                            <div className="overflow-x-auto">
+                                <table className="w-full border border-gray-300">
+                                    <thead>
+                                        <tr className="bg-gray-50">
+                                            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
+                                                Statement
+                                            </th>
+                                            {question.answer.structure.options.map(
+                                                (option) => (
+                                                    <th
+                                                        key={option.id}
+                                                        className="border border-gray-300 px-3 py-2 text-center text-sm font-medium text-gray-700"
+                                                    >
+                                                        {option.value}
                                                     </th>
+                                                )
+                                            )}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {question.answer.structure.statements.map(
+                                            (statement, index) => (
+                                                <tr key={statement.id}>
+                                                    <td className="border border-gray-300 px-3 py-2 text-sm">
+                                                        {index + 1}.{" "}
+                                                        {statement.text}
+                                                    </td>
                                                     {question.answer.structure.options.map(
                                                         (option) => (
-                                                            <th
+                                                            <td
                                                                 key={option.id}
-                                                                className="border border-gray-300 px-3 py-2 text-center text-sm font-medium text-gray-700"
+                                                                className="border border-gray-300 px-3 py-2 text-center"
                                                             >
-                                                                {option.value}
-                                                            </th>
+                                                                <input
+                                                                    type="radio"
+                                                                    name={`statement_${statement.id}`}
+                                                                    value={
+                                                                        option.value
+                                                                    }
+                                                                    checked={
+                                                                        answers[
+                                                                            question
+                                                                                .question_uid
+                                                                        ]?.[
+                                                                            statement
+                                                                                .id
+                                                                        ] ===
+                                                                        option.value
+                                                                    }
+                                                                    onChange={(
+                                                                        e
+                                                                    ) => {
+                                                                        setAnswer(
+                                                                            question.question_uid,
+                                                                            e
+                                                                                .target
+                                                                                .value,
+                                                                            statement.id,
+                                                                            "likert_scale"
+                                                                        );
+                                                                    }}
+                                                                    className="cursor-pointer h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                                                                />
+                                                            </td>
                                                         )
                                                     )}
                                                 </tr>
-                                            </thead>
-                                            <tbody>
-                                                {question.answer.structure.statements.map(
-                                                    (statement, index) => (
-                                                        <tr key={statement.id}>
-                                                            <td className="border border-gray-300 px-3 py-2 text-sm">
-                                                                {index + 1}.{" "}
-                                                                {statement.text}
-                                                            </td>
-                                                            {question.answer.structure.options.map(
-                                                                (option) => (
-                                                                    <td
-                                                                        key={
-                                                                            option.id
-                                                                        }
-                                                                        className="border border-gray-300 px-3 py-2 text-center"
-                                                                    >
-                                                                        <input
-                                                                            type="radio"
-                                                                            name={`statement_${statement.id}`}
-                                                                            value={
-                                                                                option.value
-                                                                            }
-                                                                            onChange={(
-                                                                                e
-                                                                            ) => {
-                                                                                setAnswer(
-                                                                                    question.question_uid,
-                                                                                    e
-                                                                                        .target
-                                                                                        .value,
-                                                                                    statement.id,
-                                                                                    "likert_scale"
-                                                                                );
-                                                                            }}
-                                                                            className="cursor-pointer h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                                                                        />
-                                                                    </td>
-                                                                )
-                                                            )}
-                                                        </tr>
-                                                    )
-                                                )}
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                            )
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            // Simple Likert Scale
+                            <div className="flex flex-row gap-x-5 items-center p-2 text-sm">
+                                {question.answer.structure.map(
+                                    (scale, index) => (
+                                        <div
+                                            className="flex gap-x-1.5"
+                                            key={index}
+                                        >
+                                            <input
+                                                type="radio"
+                                                value={scale.value}
+                                                name={`q_${question.question_uid}`}
+                                                checked={
+                                                    answers[
+                                                        question.question_uid
+                                                    ]?.value === scale.value
+                                                }
+                                                onChange={(e) => {
+                                                    setAnswer(
+                                                        question.question_uid,
+                                                        e.target.value,
+                                                        scale.id,
+                                                        "likert_scale"
+                                                    );
+                                                }}
+                                                className="cursor-pointer h-5 w-5 border focus:outline-none border-slate-300 transition-all checked:bg-blue-300 focus:ring-1 rounded-md p-1.5"
+                                            />
+                                            <label className="hover:cursor-pointer">
+                                                {scale.value}
+                                            </label>
+                                        </div>
+                                    )
                                 )}
+                            </div>
+                        )}
+                    </>
+                )}
 
-                            {/* Simple Likert Scale */}
-                            {Array.isArray(question.answer.structure) && (
-                                <div className="flex flex-row gap-x-5 items-center p-2 text-sm">
-                                    {question.answer.structure.map(
-                                        (scale, index) => (
-                                            <div
-                                                className="flex gap-x-1.5"
-                                                key={index}
-                                            >
-                                                <input
-                                                    type="radio"
-                                                    value={scale.value}
-                                                    name={`q_${question.question_uid}`}
-                                                    onChange={(e) => {
-                                                        setAnswer(
-                                                            question.question_uid,
-                                                            e.target.value,
-                                                            scale.id,
-                                                            "likert_scale"
-                                                        );
-                                                    }}
-                                                    className="cursor-pointer h-5 w-5 border focus:outline-none border-slate-300 transition-all checked:bg-blue-300 focus:ring-1 rounded-md p-1.5"
-                                                />
-                                                <label className="hover:cursor-pointer">
-                                                    {scale.value}
-                                                </label>
-                                            </div>
-                                        )
-                                    )}
-                                </div>
-                            )}
-                        </>
-                    )}
                 {(!question.answer || !question.answer.type) && (
                     <div className="p-3 bg-red-100 border border-red-300 rounded text-red-700">
                         <p>

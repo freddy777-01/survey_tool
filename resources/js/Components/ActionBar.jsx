@@ -23,7 +23,7 @@ export default function ActionBar({ questionId, toast }) {
 
     let formSavedStatus = formContext._formSavedStatus();
     /* useEffect(() => {
-        console.log(formContext.getFormQuestions());
+
     }, [formContext.getFormQuestions()]); */
 
     const validator = (form) => {
@@ -115,35 +115,16 @@ export default function ActionBar({ questionId, toast }) {
                 )
                 .required(),
         }); */
-
-        /* const form = {
-            title: formContext._formTitle(),
-            description: formContext._formDescription(),
-            sections: formContext.getSections(),
-            questions: formContext.getFormQuestions(),
-        }; */
-
-        /* const { error, value } = schema.validate(form);
-
-        if (error) {
-            console.log(error.message);
-            return false;
-        } else {
-            return true;
-        } */
-
-        // validatorError().catch((e) => console.log(e));
-        /*  try {
-            } catch (error) {
-                toast.error(error + "!");
-                console.log(error);
-            } */
     };
     const submitForm = () => {
         let form;
 
-        // In edit mode, always use context data instead of localStorage
-        if (formContext.getFormMode() === "edit") {
+        // Always get form data from localStorage using form_uid
+        const formUID = formContext.getFormUID();
+        form = JSON.parse(localStorage.getItem(formUID));
+
+        // If form is null or doesn't have required data, try to get it from context
+        if (!form || !form.title) {
             form = {
                 form_uid: formContext.getFormUID(),
                 title: formContext._formTitle(),
@@ -153,30 +134,6 @@ export default function ActionBar({ questionId, toast }) {
                 sections: formContext.getSections(),
                 questions: formContext.getFormQuestions(),
             };
-            // console.log("Form from context (edit mode):", form);
-        } else {
-            // For create mode, try localStorage first, then fallback to context
-            form = JSON.parse(localStorage.getItem(formContext.getFormUID()));
-
-            // Debug logging to see what's in the form
-            /* console.log("Form from localStorage:", form);
-            console.log("Form title from context:", formContext._formTitle());
-            console.log("Form UID:", formContext.getFormUID());
-            console.log("Form mode:", formContext.getFormMode()); */
-
-            // If form is null or doesn't have title, try to get it from context
-            if (!form || !form.title) {
-                form = {
-                    form_uid: formContext.getFormUID(),
-                    title: formContext._formTitle(),
-                    description: formContext._formDescription(),
-                    begin_date: formContext._beginDate(),
-                    end_date: formContext._endDate(),
-                    sections: formContext.getSections(),
-                    questions: formContext.getFormQuestions(),
-                };
-                console.log("Reconstructed form:", form);
-            }
         }
 
         // Additional timeline validation
@@ -211,19 +168,19 @@ export default function ActionBar({ questionId, toast }) {
 
         const validation = ValidatorForm(form);
         if (!validation.valid) {
-            console.log("Validation failed for form:", form);
-            console.log("Validation message:", validation.message);
+            // console.log("Validation failed for form:", form);
+            // console.log("Validation message:", validation.message);
             toast.warning(validation.message);
         } else {
-            console.log("Form is valid, submitting:", form);
+            // console.log("Form is valid, submitting:", form);
             router.post("/save-form", form, {
                 preserveState: true,
                 onSuccess: (r) => {
                     formContext._setFormSavedStatus(true);
+
                     toast.success("Survey saved successfully!");
                 },
                 onError: (e) => {
-                    console.log("Save error:", e);
                     toast.error("Failed to save survey. Please try again.");
                 },
             });
@@ -279,6 +236,9 @@ export default function ActionBar({ questionId, toast }) {
                         !formContext._formTitle() ||
                         formContext.getFormQuestions().length === 0
                     }
+                    title={`Saved: ${formContext._formSavedStatus()}, Title: ${!!formContext._formTitle()}, Questions: ${
+                        formContext.getFormQuestions().length
+                    }`}
                     onClick={(e) => {
                         e.preventDefault();
 

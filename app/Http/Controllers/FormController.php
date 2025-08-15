@@ -76,6 +76,7 @@ class FormController extends Controller
 
     private function removeCurrentFormDetails($form)
     {
+        // dd($form);
         $form_uid = $form['form_uid'];
         $form_id = Form::where('form_uid', $form_uid)->value('id');
 
@@ -109,17 +110,19 @@ class FormController extends Controller
                 }
             }
         } else {
-            $questions = Question::where('form_id', $form_id)
-                ->get();
 
+            // Delete in the correct order to avoid foreign key constraints
+            // 1. First delete all answers
+            $questions = Question::where('form_id', $form_id)->get();
             foreach ($questions as $question) {
-                //  answers for each question
                 Answer::where('question_id', $question->id)->delete();
             }
 
-            //  delete questions
-            Question::where('form_id', $form_id)
-                ->delete();
+            // 2. Then delete all questions
+            Question::where('form_id', $form_id)->delete();
+
+            // 3. Finally delete all sections
+            Section::where("form_id", Form::where('form_uid', $form_uid)->value('id'))->delete();
         }
     }
 
@@ -133,6 +136,7 @@ class FormController extends Controller
         $endDate = $form['end_date'] ?? null;
         $this->removeCurrentFormDetails($form);
         // $newForm = new Form();
+        // dd($form);
         try {
             DB::beginTransaction();
 
@@ -211,7 +215,7 @@ class FormController extends Controller
                     /* if ($question->save()) {
                             } */
                     $answer = new Answer();
-
+                    // dd($q['answer']['structure']);
                     $answer->type = $q['answer']['type'];
                     $answer->structure = json_encode($q['answer']['structure']);
                     $answer->question_id = $question->id;
@@ -222,13 +226,7 @@ class FormController extends Controller
             return redirect()->back();
         } catch (\Throwable $th) {
             DB::rollBack();
-            \Illuminate\Support\Facades\Log::error('Form save error', [
-                'message' => $th->getMessage(),
-                'file' => $th->getFile(),
-                'line' => $th->getLine(),
-                'trace' => $th->getTraceAsString(),
-                'form_data' => $form
-            ]);
+
             return redirect()->back()->withErrors(['error' => $th->getMessage()]);
         }
     }
@@ -244,9 +242,16 @@ class FormController extends Controller
 
         $questions = Question::where('form_id', $formDetail['id'])->get(['id', 'question_uid', 'question', 'description', 'form_id', 'section_id'])->map(function ($question) {
             $answer = Answer::where('question_id', $question['id'])->first(['id', 'type', 'structure', 'question_id']);
-            $answer['structure'] = json_decode($answer['structure']);
+            if ($answer) {
+                // Debug: Check the raw structure before and after json_decode
+                $rawStructure = $answer['structure'];
+                $decodedStructure = json_decode($answer['structure'], true);
 
-            $question['answer'] = $answer;
+
+
+                $answer['structure'] = $decodedStructure;
+                $question['answer'] = $answer;
+            }
             return $question;
         });
 
@@ -261,8 +266,9 @@ class FormController extends Controller
             $sections = [];
         }
 
-
         $form = ['form' => $formDetail, 'sections' => $sections, 'questions' => $questions];
+
+
 
         return Inertia::render('Preview/Preview', ['form' => $form]);
     }
@@ -302,21 +308,9 @@ class FormController extends Controller
         $questions = Question::where('form_id', $formDetail['id'])->get(['id', 'question_uid', 'question', 'description', 'form_id', 'section_id'])->map(function ($question) {
             $answer = Answer::where('question_id', $question['id'])->first(['id', 'type', 'structure', 'question_id']);
             if ($answer) {
-                $answer['structure'] = json_decode($answer['structure']);
+                $answer['structure'] = json_decode($answer['structure'], true);
                 $question['answer'] = $answer;
-            } else {
-                // Handle questions without answer records
-                $question['answer'] = null;
             }
-
-            // Debug logging
-            \Illuminate\Support\Facades\Log::info("Question structure for question {$question['id']}:", [
-                'question' => $question['question'],
-                'answer' => $question['answer'],
-                'answer_type' => $question['answer']['type'] ?? 'null',
-                'structure' => $question['answer']['structure'] ?? 'null'
-            ]);
-
             return $question;
         });
         if (count($sections) > 0) {

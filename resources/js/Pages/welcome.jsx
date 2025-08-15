@@ -346,7 +346,7 @@ function welcome({ forms }) {
                                             }}
                                         >
                                             <FiBarChart2 className="w-4 h-4" />
-                                            Open
+                                            Stats
                                         </Button>
 
                                         <Button

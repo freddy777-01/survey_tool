@@ -23,7 +23,23 @@ export default function Question({
     const [selectedSection, setSelectedSection] = React.useState(
         defaultSection && defaultSection.section_uid ? defaultSection : null
     );
-    const [likertType, setLikertType] = React.useState("simple"); // "simple" or "table"
+    const [likertType, setLikertType] = React.useState(() => {
+        // Determine Likert scale type based on question structure
+        if (
+            question.answer?.type === "likert_scale" &&
+            question.answer?.structure
+        ) {
+            if (
+                question.answer.structure.statements &&
+                question.answer.structure.options
+            ) {
+                return "table";
+            } else if (Array.isArray(question.answer.structure)) {
+                return "simple";
+            }
+        }
+        return "simple"; // Default fallback
+    });
 
     // console.log(defaultSection);
 
@@ -43,6 +59,23 @@ export default function Question({
         });
         setSelectedSection(_selectedSection || null);
     }, [formContext.getSections(), defaultSection, questionId]);
+
+    // Update likertType when question structure changes (e.g., when loading from database)
+    useEffect(() => {
+        if (
+            question.answer?.type === "likert_scale" &&
+            question.answer?.structure
+        ) {
+            if (
+                question.answer.structure.statements &&
+                question.answer.structure.options
+            ) {
+                setLikertType("table");
+            } else if (Array.isArray(question.answer.structure)) {
+                setLikertType("simple");
+            }
+        }
+    }, [question.answer?.structure]);
 
     return (
         <li className="w-[40rem] p-2 rounded-lg shadow-lg bg-gray-100 my-5 list-none">
@@ -123,9 +156,30 @@ export default function Question({
                 {(formMode == "create" || formMode == "edit") && (
                     <select
                         className="ring-1 ring-blue-300 focus:ring-1 focus:ring-blue-500 rounded-md p-1.5"
-                        onChange={(e) => setChoice(e.target.value)}
-                        // value={formContext.choice}
-                        defaultValue={questionChoice}
+                        onChange={(e) => {
+                            const newChoice = e.target.value;
+                            setChoice(newChoice);
+                            // Update the question's answer structure in the form context
+                            if (newChoice === "likert_scale") {
+                                // Initialize with default structure based on likertType
+                                const defaultStructure =
+                                    likertType === "table"
+                                        ? { statements: [], options: [] }
+                                        : [];
+                                formContext.changeAnswerStructure(
+                                    questionId,
+                                    newChoice,
+                                    defaultStructure
+                                );
+                            } else {
+                                formContext.changeAnswerStructure(
+                                    questionId,
+                                    newChoice,
+                                    []
+                                );
+                            }
+                        }}
+                        value={question.answer?.type || questionChoice}
                     >
                         <option value="multiple_choice">Multiple Choice</option>
                         <option value="check_box">Check Box</option>
@@ -200,9 +254,16 @@ export default function Question({
                                             name={`likert_type_${questionId}`}
                                             value="simple"
                                             checked={likertType === "simple"}
-                                            onChange={(e) =>
-                                                setLikertType(e.target.value)
-                                            }
+                                            onChange={(e) => {
+                                                const newType = e.target.value;
+                                                setLikertType(newType);
+                                                // Update the question's answer structure when likert type changes
+                                                formContext.changeAnswerStructure(
+                                                    questionId,
+                                                    "likert_scale",
+                                                    []
+                                                );
+                                            }}
                                             className="w-4 h-4 text-blue-600"
                                         />
                                         <span className="text-sm">
@@ -215,9 +276,19 @@ export default function Question({
                                             name={`likert_type_${questionId}`}
                                             value="table"
                                             checked={likertType === "table"}
-                                            onChange={(e) =>
-                                                setLikertType(e.target.value)
-                                            }
+                                            onChange={(e) => {
+                                                const newType = e.target.value;
+                                                setLikertType(newType);
+                                                // Update the question's answer structure when likert type changes
+                                                formContext.changeAnswerStructure(
+                                                    questionId,
+                                                    "likert_scale",
+                                                    {
+                                                        statements: [],
+                                                        options: [],
+                                                    }
+                                                );
+                                            }}
                                             className="w-4 h-4 text-blue-600"
                                         />
                                         <span className="text-sm">

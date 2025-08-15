@@ -16,20 +16,49 @@ export default function MultipleChoice({
     const [choices, setChoices] = React.useState(structure);
 
     useEffect(() => {
-        const question = formContext
-            .getFormQuestions()
-            .find((q) => q.question_uid === questionId);
+        // Wait for FormProvider to be ready
+        const checkData = () => {
+            const question = formContext
+                .getFormQuestions()
+                .find((q) => q.question_uid === questionId);
 
-        if (question && question.answer && question.answer.structure) {
+            if (!question || !question.answer || !question.answer.structure) {
+                // If no question data yet, try again in 50ms
+                setTimeout(checkData, 50);
+                return;
+            }
+
             setChoices(question.answer.structure);
-        }
-    }, [formContext.getFormQuestions(), questionId]);
+        };
+
+        // Start checking for data
+        checkData();
+    }, [questionId]);
 
     useEffect(() => {
         if (formMode === "create" || formMode === "edit") {
             formContext.changeAnswerStructure(questionId, choice, choices);
         }
     }, [choice]);
+
+    // Sync local state with global state when options are removed
+    useEffect(() => {
+        const questions = formContext.getFormQuestions();
+        if (questions && questions.length > 0) {
+            const question = questions.find(
+                (q) => q.question_uid === questionId
+            );
+            if (question && question.answer && question.answer.structure) {
+                const globalStructure = question.answer.structure;
+                // Only update if the global structure is different from current choices
+                if (
+                    JSON.stringify(globalStructure) !== JSON.stringify(choices)
+                ) {
+                    setChoices(globalStructure);
+                }
+            }
+        }
+    }, [questionId, formContext.getFormQuestions()]);
 
     let updateChoices = () => {};
     let addChoice = (choice) => {
@@ -84,12 +113,18 @@ export default function MultipleChoice({
                                 variant="ghost"
                                 size="sm"
                                 className="ml-2 p-1 text-red-600 hover:bg-red-50 hover:text-red-700"
-                                onClick={() =>
+                                onClick={() => {
                                     formContext.removeQuestionChoice(
                                         questionId,
                                         choice.id
-                                    )
-                                }
+                                    );
+                                    // Also update local state immediately
+                                    setChoices(
+                                        choices.filter(
+                                            (c) => c.id !== choice.id
+                                        )
+                                    );
+                                }}
                             >
                                 <RxCross2 className="w-4 h-4" />
                             </Button>

@@ -41,8 +41,6 @@ export default function Question({
         return "simple"; // Default fallback
     });
 
-    // console.log(defaultSection);
-
     useEffect(() => {
         // If defaultSection is provided (from edit page), use it
         if (defaultSection && defaultSection.section_uid) {

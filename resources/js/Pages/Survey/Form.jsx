@@ -33,15 +33,10 @@ function FormContent() {
     const startDate = formContext._beginDate();
     const endDate = formContext._endDate();
 
-    useEffect(() => {
-        console.log("Form component initialized in create mode");
-        console.log("Initial form title:", formContext._formTitle());
-    }, []);
+    useEffect(() => {}, []);
 
     // Debug logging for form title changes
-    useEffect(() => {
-        console.log("Form title changed:", formContext._formTitle());
-    }, [formContext._formTitle()]);
+    useEffect(() => {}, [formContext._formTitle()]);
 
     // console.log(formContext.getFormUID());
 

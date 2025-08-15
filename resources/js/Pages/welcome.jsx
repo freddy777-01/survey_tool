@@ -135,13 +135,13 @@ function welcome({ forms }) {
     return (
         <Layout>
             {/* Header Section */}
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 mb-8 text-white">
+            <div className="rounded-xl p-6 mb-8 bg-blue-300 font-bold text-white">
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-3xl font-bold mb-2">
                             Survey Dashboard
                         </h1>
-                        <p className="text-blue-100">
+                        <p className="text-white">
                             Manage and monitor your surveys
                         </p>
                     </div>
@@ -262,7 +262,9 @@ function welcome({ forms }) {
                 <div
                     className={
                         viewMode === "grid"
-                            ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                            ? filteredForms.length === 1
+                                ? "flex justify-center"
+                                : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                             : "space-y-4"
                     }
                 >
@@ -272,6 +274,9 @@ function welcome({ forms }) {
                             className={`bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-300 overflow-hidden ${
                                 viewMode === "list"
                                     ? "flex items-center p-6"
+                                    : filteredForms.length === 1 &&
+                                      viewMode === "grid"
+                                    ? "p-6 max-w-md w-full"
                                     : "p-6"
                             }`}
                         >
@@ -346,7 +351,7 @@ function welcome({ forms }) {
                                             }}
                                         >
                                             <FiBarChart2 className="w-4 h-4" />
-                                            Stats
+                                            View
                                         </Button>
 
                                         <Button

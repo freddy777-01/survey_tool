@@ -168,11 +168,8 @@ export default function ActionBar({ questionId, toast }) {
 
         const validation = ValidatorForm(form);
         if (!validation.valid) {
-            // console.log("Validation failed for form:", form);
-            // console.log("Validation message:", validation.message);
             toast.warning(validation.message);
         } else {
-            // console.log("Form is valid, submitting:", form);
             router.post("/save-form", form, {
                 preserveState: true,
                 onSuccess: (r) => {
@@ -204,7 +201,6 @@ export default function ActionBar({ questionId, toast }) {
                     className="p-1 px-3 bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
                     onClick={() => {
                         formContext.addSection();
-                        // console.log(formContext.getSections());
                     }}
                 >
                     <TiEqualsOutline className="w-4 h-4" />
@@ -266,7 +262,6 @@ export default function ActionBar({ questionId, toast }) {
 
                         const form_uid = formContext.getFormUID();
                         if (!form_uid) {
-                            console.error("No form_uid found!");
                             return;
                         }
                         const url = `/preview?form_uid=${form_uid}`;
@@ -365,7 +360,6 @@ export default function ActionBar({ questionId, toast }) {
                             }
                         } catch (error) {
                             toast.error("Failed to publish survey");
-                            console.error(error);
                         }
                     }}
                 >

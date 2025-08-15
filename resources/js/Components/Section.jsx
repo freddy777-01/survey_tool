@@ -6,7 +6,6 @@ import { Button } from "@/Components/ui/button";
 
 export default function Section({ section }) {
     const formContext = React.useContext(FormContext);
-    // console.log(section.name);
 
     return (
         <li

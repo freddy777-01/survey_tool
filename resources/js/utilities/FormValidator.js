@@ -62,14 +62,6 @@ export function ValidatorForm(form) {
             }
         }
         if (question.answer.type === "likert_scale") {
-            console.log("Validating Likert scale question:", question);
-            console.log("Structure type:", typeof question.answer.structure);
-            console.log(
-                "Structure is array:",
-                Array.isArray(question.answer.structure)
-            );
-            console.log("Structure length:", question.answer.structure?.length);
-
             // For simple Likert scale (array format)
             if (Array.isArray(question.answer.structure)) {
                 if (

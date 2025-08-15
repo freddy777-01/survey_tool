@@ -32,15 +32,12 @@ function EditContent({ form }) {
 
     const parentId = useId();
 
-    // console.log(form);
-
     const setSectionQuestions = () => {
         if (form.sections.length > 0) {
         }
     };
 
     const sectionMapping = (sectionUID) => {
-        // console.log(sectionUID);
         if (form.sections.length > 0) {
             let s = {
                 id: "",
@@ -61,7 +58,6 @@ function EditContent({ form }) {
                     s.questions_uid = section.questions_uid;
                 }
             });
-            // console.log(s);
 
             return s;
         }

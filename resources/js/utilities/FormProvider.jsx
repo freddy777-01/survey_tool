@@ -190,7 +190,6 @@ function FormProvider({
     // Form Mode
     const getFormMode = () => formMode;
     const setFormModeContext = (mode) => {
-        // console.log("Setting form mode to:", mode);
         setFormMode(mode);
     };
 
@@ -223,7 +222,6 @@ function FormProvider({
             questions_uid: [],
         };
         setSections((sections) => [...sections, section]);
-        // console.log(sections);
     };
 
     const addSectionToQuestion = (questionId, sectionId) => {
@@ -238,7 +236,7 @@ function FormProvider({
 
     const addQuestionToSection = (questionId, sectionId) => {
         // If sectionId is empty or "0", remove question from all sections
-        // console.log(questionId);
+
         if (sectionId == 0) return;
 
         let updatedSections = sections.map((section) => {
@@ -250,7 +248,6 @@ function FormProvider({
             if (section.section_uid == sectionId) {
                 section.questions_uid.push(questionId);
             }
-            // console.log(section.questions_uid);
 
             return section;
         });
@@ -260,7 +257,6 @@ function FormProvider({
     };
 
     const removeSectionFromQuestion = (sectionId) => {
-        // console.log(sectionId);
         let updateQuestions = formQuestions.map((question) => {
             if (sectionId == question.section_uid) {
                 question.section_uid = "";
@@ -363,14 +359,6 @@ function FormProvider({
     // Dealing with questions
     const addFormQuestion = () => {
         // creating question instance, and adding it to formQuestions
-        // console.log("adding question");
-
-        /*  console.log(
-            "Current FormQuestions :" +
-                formQuestions +
-                "question Id :" +
-                moment().valueOf()
-        ); */
 
         let question_uid = moment().valueOf();
 
@@ -386,8 +374,6 @@ function FormProvider({
         };
         // let newQuestions = formQuestions.push(question)
         setFormQuestions([...formQuestions, question]);
-
-        // console.log("New question list" + formQuestions);
     };
 
     const writeQuestion = (questionId, qn) => {
@@ -431,7 +417,6 @@ function FormProvider({
         });
         setSections(updateSections);
         setFormQuestions(newQuestions);
-        // console.log(newQuestions);
     };
 
     const changeQuestionType = (qContent) => {

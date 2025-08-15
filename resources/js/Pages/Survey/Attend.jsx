@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import Layout from "@/Pages/Layout";
 import { Button } from "@/Components/ui/button";
 import { makeApiRequest } from "@/utilities/api";
@@ -43,11 +43,78 @@ export default function Attend({ form }) {
     const [submitted, setSubmitted] = useState(false);
     const [showThankYouModal, setShowThankYouModal] = useState(false);
     const [resultQuestion, setResultQuestion] = useState(questions);
+    const [scrollPosition, setScrollPosition] = useState(0);
+    const scrollPositionRef = useRef(0);
 
-    // Debug logging
-    /* console.log("Attend component loaded with form:", form);
-    console.log("Main form data:", main); */
-    // console.log("Sections:", sections);
+    // Prevent form submission and scrolling
+    useEffect(() => {
+        // Prevent scroll restoration
+        if ("scrollRestoration" in history) {
+            history.scrollRestoration = "manual";
+        }
+
+        const handleFormSubmit = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        };
+
+        const handleKeyDown = (e) => {
+            if (e.key === "Enter" && e.target.type !== "textarea") {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+        };
+
+        const handleScroll = () => {
+            scrollPositionRef.current = window.scrollY;
+        };
+
+        document.addEventListener("submit", handleFormSubmit, true);
+        document.addEventListener("keydown", handleKeyDown, true);
+        window.addEventListener("scroll", handleScroll);
+
+        return () => {
+            document.removeEventListener("submit", handleFormSubmit, true);
+            document.removeEventListener("keydown", handleKeyDown, true);
+            window.removeEventListener("scroll", handleScroll);
+        };
+    }, []);
+
+    // Restore scroll position after state updates
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (scrollPositionRef.current > 0) {
+                window.scrollTo(0, scrollPositionRef.current);
+            }
+        }, 0);
+
+        return () => clearTimeout(timer);
+    }, [answers]);
+
+    // Additional scroll prevention
+    useEffect(() => {
+        const preventScroll = (e) => {
+            if (
+                e.target.tagName === "INPUT" ||
+                e.target.tagName === "TEXTAREA"
+            ) {
+                const currentScroll = window.scrollY;
+                setTimeout(() => {
+                    window.scrollTo(0, currentScroll);
+                }, 0);
+            }
+        };
+
+        document.addEventListener("focusin", preventScroll);
+        document.addEventListener("focusout", preventScroll);
+
+        return () => {
+            document.removeEventListener("focusin", preventScroll);
+            document.removeEventListener("focusout", preventScroll);
+        };
+    }, []);
 
     useEffect(() => {
         setResultQuestion(questions);
@@ -97,10 +164,12 @@ export default function Attend({ form }) {
             }
         });
         setAnswers(answersSlot);
-        // console.log("Initialized answers:", answersSlot);
     }, [questions]);
 
     const setAnswer = (question_uid, value, structureId, type) => {
+        // Store current scroll position before state update
+        const currentScroll = window.scrollY;
+
         setAnswers((prev) => {
             if (type === "check_box") {
                 // For checkbox questions, update the specific array element
@@ -166,6 +235,11 @@ export default function Attend({ form }) {
                 };
             }
         });
+
+        // Restore scroll position after state update
+        setTimeout(() => {
+            window.scrollTo(0, currentScroll);
+        }, 0);
     };
 
     // Helper function to find which section a question belongs to
@@ -338,6 +412,9 @@ export default function Attend({ form }) {
                                                         ?.checked || false
                                                 }
                                                 onChange={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    e.stopImmediatePropagation();
                                                     setAnswer(
                                                         q.question_uid,
                                                         e.target.value,
@@ -345,7 +422,22 @@ export default function Attend({ form }) {
                                                         "multiple_choice"
                                                     );
                                                 }}
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                }}
+                                                onFocus={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                }}
+                                                onBlur={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                }}
                                                 className="w-4 h-4 text-blue-600"
+                                                style={{
+                                                    scrollBehavior: "auto",
+                                                }}
                                             />
                                             <span className="text-gray-700">
                                                 {opt.value}
@@ -370,12 +462,17 @@ export default function Attend({ form }) {
                                                         ?.checked || false
                                                 }
                                                 onChange={(e) => {
+                                                    e.preventDefault();
                                                     setAnswer(
                                                         q.question_uid,
                                                         opt.value,
                                                         opt.id,
                                                         "check_box"
                                                     );
+                                                }}
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
                                                 }}
                                                 className="w-4 h-4 text-blue-600"
                                             />
@@ -412,6 +509,7 @@ export default function Attend({ form }) {
                                                     ?.value === opt
                                             }
                                             onChange={(e) => {
+                                                e.preventDefault();
                                                 setAnswer(
                                                     q.question_uid,
                                                     e.target.value,
@@ -487,6 +585,7 @@ export default function Attend({ form }) {
                                                                             onChange={(
                                                                                 e
                                                                             ) => {
+                                                                                e.preventDefault();
                                                                                 setAnswer(
                                                                                     q.question_uid,
                                                                                     e
@@ -527,6 +626,7 @@ export default function Attend({ form }) {
                                                             scale.value
                                                         }
                                                         onChange={(e) => {
+                                                            e.preventDefault();
                                                             setAnswer(
                                                                 q.question_uid,
                                                                 e.target.value,
@@ -565,6 +665,7 @@ export default function Attend({ form }) {
                                         rows={3}
                                         placeholder="Please provide your answer..."
                                         onChange={(e) => {
+                                            e.preventDefault();
                                             setAnswer(
                                                 q.question_uid,
                                                 e.target.value,
@@ -617,6 +718,7 @@ export default function Attend({ form }) {
                                                 ?.checked || false
                                         }
                                         onChange={(e) => {
+                                            e.preventDefault();
                                             setAnswer(
                                                 question.question_uid,
                                                 e.target.value,
@@ -649,6 +751,7 @@ export default function Attend({ form }) {
                                                 ?.checked || false
                                         }
                                         onChange={(e) => {
+                                            e.preventDefault();
                                             setAnswer(
                                                 question.question_uid,
                                                 opt.value,
@@ -687,6 +790,7 @@ export default function Attend({ form }) {
                                     name={`q_${question.id}`}
                                     value={opt}
                                     onChange={(e) => {
+                                        e.preventDefault();
                                         setAnswer(question.id, e.target.value);
                                     }}
                                     className="w-4 h-4 text-blue-600"
@@ -753,6 +857,7 @@ export default function Attend({ form }) {
                                                                     onChange={(
                                                                         e
                                                                     ) => {
+                                                                        e.preventDefault();
                                                                         setAnswer(
                                                                             question.question_uid,
                                                                             e
@@ -792,6 +897,7 @@ export default function Attend({ form }) {
                                                     ]?.value === scale.value
                                                 }
                                                 onChange={(e) => {
+                                                    e.preventDefault();
                                                     setAnswer(
                                                         question.question_uid,
                                                         e.target.value,
@@ -830,6 +936,7 @@ export default function Attend({ form }) {
                                 rows={3}
                                 placeholder="Please provide your answer..."
                                 onChange={(e) => {
+                                    e.preventDefault();
                                     setAnswer(question.id, e.target.value);
                                 }}
                             />
@@ -886,7 +993,14 @@ export default function Attend({ form }) {
             )}
 
             <Layout>
-                <div className="max-w-4xl mx-auto w-[90%]">
+                <div
+                    className="max-w-4xl mx-auto w-[90%]"
+                    style={{
+                        scrollBehavior: "auto",
+                        scrollRestoration: "manual",
+                    }}
+                    onScroll={(e) => e.stopPropagation()}
+                >
                     <div className="mb-8 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200">
                         <h2 className="text-3xl font-bold text-gray-800 mb-2">
                             {main.name}
@@ -896,20 +1010,36 @@ export default function Attend({ form }) {
                         </p>
                     </div>
 
-                    {sections.length > 0 ? (
-                        sections.map((section) => (
-                            <SectionBlock key={section.id} section={section} />
-                        ))
-                    ) : (
-                        <div className="space-y-4">
-                            {questions.map((question) => (
-                                <QuestionBlock
-                                    key={question.question_uid}
-                                    question={question}
+                    <div
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                                e.preventDefault();
+                                e.stopPropagation();
+                            }
+                        }}
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                        }}
+                    >
+                        {sections.length > 0 ? (
+                            sections.map((section) => (
+                                <SectionBlock
+                                    key={section.id}
+                                    section={section}
                                 />
-                            ))}
-                        </div>
-                    )}
+                            ))
+                        ) : (
+                            <div className="space-y-4">
+                                {questions.map((question) => (
+                                    <QuestionBlock
+                                        key={question.question_uid}
+                                        question={question}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </div>
 
                     <div className="flex justify-between items-center mt-8 p-4 bg-gray-50 rounded-lg border">
                         <div className="text-sm text-gray-600">

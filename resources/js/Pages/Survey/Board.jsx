@@ -63,7 +63,7 @@ export default function Board({ form, participants: initialParticipants = 0 }) {
                 setPerQuestion(data.perQuestion ?? []);
             }
         } catch (error) {
-            console.error("Error fetching stats:", error);
+            // Error handling for stats fetching
         }
     };
 
@@ -91,7 +91,6 @@ export default function Board({ form, participants: initialParticipants = 0 }) {
             }
         } catch (error) {
             toast.error("Failed to publish survey");
-            console.error(error);
         } finally {
             setIsLoading(false);
         }
@@ -121,7 +120,6 @@ export default function Board({ form, participants: initialParticipants = 0 }) {
             }
         } catch (error) {
             toast.error("Failed to unpublish survey");
-            console.error(error);
         } finally {
             setIsLoading(false);
         }
@@ -684,6 +682,7 @@ export default function Board({ form, participants: initialParticipants = 0 }) {
                                                                                             {
                                                                                                 label
                                                                                             }
+
                                                                                             :
                                                                                         </span>
                                                                                         <span className="font-medium">

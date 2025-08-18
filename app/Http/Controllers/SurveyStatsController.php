@@ -152,4 +152,143 @@ class SurveyStatsController extends Controller
 
         return response()->json(['message' => 'Response submitted successfully']);
     }
+
+    public function results(Request $request)
+    {
+        $formUid = $request->query('form_uid');
+        $form = Form::where('form_uid', $formUid)->first();
+
+        if (!$form) {
+            return response()->json(['message' => 'Survey not found'], 404);
+        }
+
+        $questions = Question::where('form_id', $form->id)
+            ->orderBy('id')
+            ->get(['id', 'question_uid', 'question', 'section_id']);
+
+        $results = [];
+        $totalResponses = Response::where('form_id', $form->id)->count();
+
+        foreach ($questions as $question) {
+            $answerData = Answer::where('question_id', $question->id)->first();
+            $responseAnswers = ResponseAnswer::where('question_id', $question->id)->pluck('value');
+
+            $questionResult = [
+                'question' => $question->question,
+                'type' => $answerData ? $answerData->type : 'unknown',
+                'totalResponses' => $responseAnswers->count(),
+            ];
+
+            if ($answerData && $answerData->type === 'likert_scale') {
+                // Handle Likert scale questions
+                $structure = json_decode($answerData->structure, true);
+                $statements = $structure['statements'] ?? [];
+                $options = $structure['options'] ?? [];
+
+                $statementResults = [];
+                foreach ($statements as $index => $statement) {
+
+                    $statementResponses = [];
+                    $statementCount = 0;
+
+                    foreach ($responseAnswers as $answer) {
+                        if (is_array($answer) && isset($answer[$index])) {
+                            $selectedOption = $answer[$index];
+                            $statementResponses[$selectedOption] = ($statementResponses[$selectedOption] ?? 0) + 1;
+                            $statementCount++;
+                        }
+                    }
+
+                    // Extract text from statement object
+                    $statementText = '';
+                    if (is_string($statement)) {
+                        $statementText = $statement;
+                    } elseif (is_array($statement)) {
+                        // Handle array format - check for 'text' key first
+                        if (isset($statement['text'])) {
+                            $statementText = $statement['text'];
+                        } elseif (isset($statement['t'])) {
+                            // Handle optimized format
+                            $statementText = $statement['t'];
+                        } elseif (count($statement) > 0) {
+                            // If it's a simple array, take the first element
+                            $statementText = is_string($statement[0]) ? $statement[0] : json_encode($statement[0]);
+                        } else {
+                            $statementText = "Statement " . ($index + 1);
+                        }
+                    } elseif (is_object($statement)) {
+                        // Handle object format
+                        if (isset($statement->text)) {
+                            $statementText = $statement->text;
+                        } elseif (isset($statement->t)) {
+                            $statementText = $statement->t;
+                        } else {
+                            $statementText = "Statement " . ($index + 1);
+                        }
+                    } else {
+                        // Fallback for any other format
+                        $statementText = "Statement " . ($index + 1);
+                    }
+
+                    // Ensure we have a valid text
+                    if (empty($statementText) || $statementText === 'null' || $statementText === 'undefined') {
+                        $statementText = "Statement " . ($index + 1);
+                    }
+
+                    $statementResults[] = [
+                        'text' => $statementText,
+                        'totalResponses' => $statementCount,
+                        'responses' => array_map(function ($option, $count) use ($statementCount) {
+                            return [
+                                'option' => is_string($option) ? $option : (string)$option,
+                                'count' => (int)$count,
+                                'percentage' => $count > 0 ? round(($count / $statementCount) * 100, 1) : 0
+                            ];
+                        }, array_keys($statementResponses), array_values($statementResponses))
+                    ];
+                }
+
+                $questionResult['statements'] = $statementResults;
+            } else {
+                // Handle other question types
+                $flatAnswers = [];
+                foreach ($responseAnswers as $answer) {
+                    if (is_array($answer)) {
+                        foreach ($answer as $value) {
+                            if (!is_null($value)) {
+                                $flatAnswers[] = $value;
+                            }
+                        }
+                    } elseif (!is_null($answer)) {
+                        $flatAnswers[] = $answer;
+                    }
+                }
+
+                $counts = [];
+                foreach ($flatAnswers as $answer) {
+                    $counts[$answer] = ($counts[$answer] ?? 0) + 1;
+                }
+
+                $totalCount = array_sum($counts);
+                $responses = [];
+                foreach ($counts as $option => $count) {
+                    $responses[] = [
+                        'option' => is_string($option) ? $option : (string)$option,
+                        'count' => (int)$count,
+                        'percentage' => $totalCount > 0 ? round(($count / $totalCount) * 100, 1) : 0
+                    ];
+                }
+
+                $questionResult['responses'] = $responses;
+            }
+
+            $results[] = $questionResult;
+        }
+
+        return response()->json([
+            'results' => $results,
+            'totalResponses' => $totalResponses,
+            'formName' => $form->name
+        ]);
+    }
 }

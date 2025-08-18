@@ -221,30 +221,22 @@ export default function ActionBar({ questionId, toast }) {
                     variant="outline"
                     size="sm"
                     className={`p-1 px-3 flex items-center gap-2 ${
-                        !formContext._formSavedStatus() ||
                         !formContext._formTitle() ||
-                        formContext.getFormQuestions().length === 0
+                        formContext.getFormQuestions().length === 0 ||
+                        !formContext._formSavedStatus()
                             ? "border-gray-300 text-gray-400 hover:bg-gray-50 cursor-not-allowed"
                             : "border-blue-500 text-blue-600 hover:bg-blue-50"
                     }`}
                     disabled={
-                        !formContext._formSavedStatus() ||
                         !formContext._formTitle() ||
-                        formContext.getFormQuestions().length === 0
+                        formContext.getFormQuestions().length === 0 ||
+                        !formContext._formSavedStatus()
                     }
                     title={`Saved: ${formContext._formSavedStatus()}, Title: ${!!formContext._formTitle()}, Questions: ${
                         formContext.getFormQuestions().length
                     }`}
                     onClick={(e) => {
                         e.preventDefault();
-
-                        // Check if form can be previewed
-                        if (!formContext._formSavedStatus()) {
-                            toast.warning(
-                                "Please save the form first before previewing"
-                            );
-                            return;
-                        }
 
                         if (!formContext._formTitle()) {
                             toast.warning(
@@ -256,6 +248,13 @@ export default function ActionBar({ questionId, toast }) {
                         if (formContext.getFormQuestions().length === 0) {
                             toast.warning(
                                 "Please add at least one question before previewing"
+                            );
+                            return;
+                        }
+
+                        if (!formContext._formSavedStatus()) {
+                            toast.warning(
+                                "Please save the form before previewing"
                             );
                             return;
                         }
@@ -370,13 +369,8 @@ export default function ActionBar({ questionId, toast }) {
                 <Button
                     variant="default"
                     size="sm"
-                    className={`p-1 px-3 flex items-center gap-2 ${
-                        formContext._formSavedStatus()
-                            ? "bg-gray-400 hover:bg-gray-400 cursor-not-allowed"
-                            : "bg-blue-600 hover:bg-blue-700"
-                    } text-white`}
+                    className="p-1 px-3 flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
                     onClick={() => submitForm()}
-                    disabled={formContext._formSavedStatus()}
                 >
                     <IoMdCloudUpload />
                     <span>

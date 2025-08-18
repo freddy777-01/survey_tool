@@ -6,6 +6,7 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [FormController::class, 'index']);
+Route::get('/search-surveys', [FormController::class, 'search']);
 
 Route::get('/preview', [FormController::class, 'preview']);
 
@@ -19,6 +20,7 @@ Route::get('survey/edit', [FormController::class, 'editView']);
 
 // Stats and real-time endpoints
 Route::get('/api/surveys/stats', [SurveyStatsController::class, 'stats']);
+Route::get('/api/surveys/results', [SurveyStatsController::class, 'results']);
 Route::post('/api/surveys/submit', [SurveyStatsController::class, 'submit']);
 
 // Publish/Unpublish surveys

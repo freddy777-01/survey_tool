@@ -146,12 +146,36 @@ function FormProvider({
 
     // Track changes and reset saved status for both create and edit modes
     React.useEffect(() => {
+        // Only reset saved status if we're not in preview mode and the form has been initialized
+        if (formMode === "preview" || !isInitialized) {
+            return;
+        }
+
+        // For create mode, always reset saved status when form changes
         if (formMode === "create" && formSavedStatus) {
-            // For create mode, reset saved status when form changes
             setFormSavedStatus(false);
-        } else if (formMode === "edit" && isInitialized && formSavedStatus) {
-            // For edit mode, reset saved status when form changes
-            setFormSavedStatus(false);
+        }
+        // For edit mode, only reset if there are actual changes from the original data
+        else if (formMode === "edit" && isInitialized && formSavedStatus) {
+            // Check if there are actual changes by comparing with initial form data
+            if (initialForm && initialForm.main) {
+                const hasChanges =
+                    formTitle !== (initialForm.main.name || "") ||
+                    formDescription !== (initialForm.main.description || "") ||
+                    beginDate !== (initialForm.main.begin_date || "") ||
+                    endDate !== (initialForm.main.end_date || "") ||
+                    JSON.stringify(formQuestions) !==
+                        JSON.stringify(initialForm.questions || []) ||
+                    JSON.stringify(sections) !==
+                        JSON.stringify(initialForm.sections || []);
+
+                if (hasChanges) {
+                    setFormSavedStatus(false);
+                }
+            } else {
+                // If no initial form data, reset on any change
+                setFormSavedStatus(false);
+            }
         }
     }, [
         formTitle,
@@ -163,6 +187,7 @@ function FormProvider({
         formMode,
         isInitialized,
         formSavedStatus,
+        initialForm,
     ]);
 
     // Form Title
@@ -200,6 +225,32 @@ function FormProvider({
     // Form Save Status
     const _formSavedStatus = () => formSavedStatus;
     const _setFormSavedStatus = (s) => setFormSavedStatus(s);
+
+    // Check if form has unsaved changes
+    const _hasUnsavedChanges = () => {
+        if (formMode === "preview") {
+            return false;
+        }
+
+        if (formMode === "create") {
+            return !formSavedStatus;
+        }
+
+        if (formMode === "edit" && initialForm && initialForm.main) {
+            return (
+                formTitle !== (initialForm.main.name || "") ||
+                formDescription !== (initialForm.main.description || "") ||
+                beginDate !== (initialForm.main.begin_date || "") ||
+                endDate !== (initialForm.main.end_date || "") ||
+                JSON.stringify(formQuestions) !==
+                    JSON.stringify(initialForm.questions || []) ||
+                JSON.stringify(sections) !==
+                    JSON.stringify(initialForm.sections || [])
+            );
+        }
+
+        return !formSavedStatus;
+    };
 
     // Published Status
     const _publishedStatus = () => publishedStatus;
@@ -491,6 +542,45 @@ function FormProvider({
         });
         setFormQuestions(updatedQuestions);
     };
+
+    // Question reordering functionality
+    const reorderQuestions = (newOrder) => {
+        // Update the questions array with the new order and section assignments
+        setFormQuestions(newOrder);
+
+        // Update sections to reflect the new question assignments
+        const updatedSections = sections.map((section) => {
+            const sectionQuestions = newOrder.filter(
+                (q) => q.section_uid === section.section_uid
+            );
+            return {
+                ...section,
+                questions: sectionQuestions,
+                questions_uid: sectionQuestions.map((q) => q.question_uid),
+            };
+        });
+        setSections(updatedSections);
+
+        // Force update the saved status to false to ensure changes are saved
+        setFormSavedStatus(false);
+
+        // Immediately update localStorage with the new order and sections
+        if (formUID && formUID !== "" && formMode !== "preview") {
+            let form = {
+                form_uid: formUID,
+                title: formTitle,
+                description: formDescription,
+                begin_date: beginDate,
+                end_date: endDate,
+                sections: updatedSections,
+                questions: newOrder,
+                mode: formMode,
+            };
+            localStorage.setItem(formUID, JSON.stringify(form));
+            setFormState(form);
+        }
+    };
+
     // End dealing with questions
 
     // compiling data before saving
@@ -508,6 +598,7 @@ function FormProvider({
                 removeQuestionChoice,
                 changeChoiceLabel,
                 changeAnswerStructure,
+                reorderQuestions,
                 getFormQuestions, // should also check if questions are available before saving the form
                 getIsInitialized, // check if FormProvider is initialized
                 //dealing with sections
@@ -542,6 +633,7 @@ function FormProvider({
                 //formSave status
                 _formSavedStatus,
                 _setFormSavedStatus,
+                _hasUnsavedChanges,
                 //Form Mode
                 getFormMode,
                 setFormModeContext,

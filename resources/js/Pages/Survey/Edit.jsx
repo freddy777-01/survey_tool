@@ -1,4 +1,4 @@
-import React, { useId } from "react";
+import React, { useId, useState } from "react";
 import Layout from "../Layout";
 import ActionBar from "@/Components/ActionBar";
 import Question from "@/Components/Question";
@@ -9,6 +9,7 @@ import { ToastContainer, toast } from "react-toastify";
 import { MdEditNote } from "react-icons/md";
 import DatePicker from "../../Components/DatePicker";
 import { Button } from "@/Components/ui/button";
+import QuestionArranger from "@/Components/QuestionArranger";
 import {
     FiPlus,
     FiCalendar,
@@ -19,6 +20,7 @@ import {
     FiArrowLeft,
     FiEye,
     FiBarChart2,
+    FiMove,
 } from "react-icons/fi";
 import { router } from "@inertiajs/react";
 import moment from "moment";
@@ -103,7 +105,7 @@ function EditContent({ form }) {
             </div>
 
             <div className="max-w-7xl mx-auto px-6 py-8">
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
                     {/* Main Content */}
                     <div className="lg:col-span-3">
                         {/* Form Header */}
@@ -208,17 +210,28 @@ function EditContent({ form }) {
 
                             {formContext.getFormQuestions().length > 0 ? (
                                 <div className="space-y-4">
-                                    {formContext.getFormQuestions().map((q) => (
-                                        <Question
-                                            questionId={q.question_uid}
-                                            key={q.question_uid}
-                                            question={q}
-                                            questionChoice={q.answer.type}
-                                            defaultSection={sectionMapping(
-                                                q.section_uid
-                                            )}
-                                        />
-                                    ))}
+                                    {formContext
+                                        .getFormQuestions()
+                                        .map((q, index) => (
+                                            <div
+                                                key={q.question_uid}
+                                                className="relative"
+                                            >
+                                                <div className="absolute -left-2 top-4 w-6 h-6 bg-green-100 text-green-600 rounded flex items-center justify-center text-xs font-semibold z-10">
+                                                    {index + 1}
+                                                </div>
+                                                <Question
+                                                    questionId={q.question_uid}
+                                                    question={q}
+                                                    questionChoice={
+                                                        q.answer.type
+                                                    }
+                                                    defaultSection={sectionMapping(
+                                                        q.section_uid
+                                                    )}
+                                                />
+                                            </div>
+                                        ))}
                                 </div>
                             ) : (
                                 <div className="text-center py-12">
@@ -245,9 +258,9 @@ function EditContent({ form }) {
                     </div>
 
                     {/* Sidebar */}
-                    <div className="lg:col-span-1 space-y-6">
+                    <div className="lg:col-span-2 space-y-4">
                         {/* Timeline Card */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="bg-orange-100 p-2 rounded-lg">
                                     <FiCalendar className="w-5 h-5 text-orange-600" />
@@ -323,7 +336,7 @@ function EditContent({ form }) {
                         </div>
 
                         {/* Sections Card */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="bg-green-100 p-2 rounded-lg">
                                     <FiSettings className="w-5 h-5 text-green-600" />
@@ -341,7 +354,7 @@ function EditContent({ form }) {
                         </div>
 
                         {/* Form Status */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
                             <h3 className="font-semibold text-gray-900 mb-4">
                                 Form Status
                             </h3>
@@ -426,7 +439,7 @@ function EditContent({ form }) {
                         </div>
 
                         {/* Quick Actions */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
                             <h3 className="font-semibold text-gray-900 mb-4">
                                 Quick Actions
                             </h3>
@@ -434,7 +447,7 @@ function EditContent({ form }) {
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    className="w-full justify-start hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-colors"
+                                    className="w-full p-1 px-2 justify-start hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-colors"
                                     onClick={() => {
                                         const url = `/preview?form_uid=${form.main.form_uid}`;
                                         window.open(url, "_blank");
@@ -446,7 +459,7 @@ function EditContent({ form }) {
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    className="w-full justify-start hover:bg-green-50 hover:border-green-200 hover:text-green-700 transition-colors"
+                                    className="w-full p-1 px-2 justify-start hover:bg-green-50 hover:border-green-200 hover:text-green-700 transition-colors"
                                     onClick={() => {
                                         router.get(
                                             "/survey/board",
@@ -460,6 +473,23 @@ function EditContent({ form }) {
                                 </Button>
                             </div>
                         </div>
+
+                        {/* Question Arranger */}
+                        {formContext.getFormQuestions().length > 0 && (
+                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                                <QuestionArranger
+                                    questions={formContext.getFormQuestions()}
+                                    sections={formContext.getSections()}
+                                    onClose={() => {}}
+                                    onApplyOrder={(newOrder) => {
+                                        formContext.reorderQuestions(newOrder);
+                                        toast.success(
+                                            "Question order updated successfully!"
+                                        );
+                                    }}
+                                />
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

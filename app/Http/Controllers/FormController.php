@@ -29,44 +29,146 @@ class FormController extends Controller
 
     function index(Request $request)
     {
-        $forms = Form::get(['id', 'form_uid', 'name', 'description', 'published', 'status', 'begin_date', 'end_date'])->map(function ($form) {
-            $sections = Section::where('form_id', $form['id'])->get(['id', 'name', 'section_uid', 'form_id']);
-            $questions = Question::where('form_id', $form['id'])->get(['id', 'question_uid', 'question', 'description', 'form_id', 'section_id'])->map(function ($question) {
-                $answers = Answer::where('question_id', $question['id'])->get(['id', 'type', 'structure', 'question_id'])->map(function ($answer) {
-                    $answer['structure'] = json_decode($answer['structure']);
-                    return $answer;
-                });
-                $question['answers'] = $answers;
-                return $question;
+        $searchTerm = $request->query('search', '');
+        $statusFilter = $request->query('status', 'all');
+
+        $query = Form::query();
+
+        // Apply search filter
+        if (!empty($searchTerm)) {
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('name', 'LIKE', "%{$searchTerm}%")
+                    ->orWhere('description', 'LIKE', "%{$searchTerm}%");
             });
-            $form['participants'] = Response::where('form_id', $form['id'])->count();
+        }
 
-
-
-            // compute timeline-based state
+        // Apply status filter
+        if ($statusFilter !== 'all') {
             $now = \Carbon\Carbon::now()->startOfDay();
-            $begin = $form['begin_date'] ? \Carbon\Carbon::parse($form['begin_date']) : null;
-            $end = $form['end_date'] ? \Carbon\Carbon::parse($form['end_date']) : null;
-            $state = 'unknown';
-            if ($begin && $end) {
-                if ($now->between($begin, $end, true)) {
-                    $state = 'active';
-                } elseif ($now->lt($begin)) {
-                    $state = 'upcoming';
-                } elseif ($now->gt($end)) {
-                    $state = 'expired';
-                }
+
+            switch ($statusFilter) {
+                case 'active':
+                    $query->where('published', 1)
+                        ->where('begin_date', '<=', $now)
+                        ->where('end_date', '>=', $now);
+                    break;
+                case 'upcoming':
+                    $query->where('begin_date', '>', $now);
+                    break;
+                case 'expired':
+                    $query->where('end_date', '<', $now);
+                    break;
             }
-            $form['state'] = $state;
-            // keep existing status field, but prefer computed state for UI
-            $form['sections'] = $sections;
-            $form['questions'] = $questions;
-            return $form;
-        });
+        }
 
-        // dd($forms);
+        $forms = $query->get(['id', 'form_uid', 'name', 'description', 'published', 'status', 'begin_date', 'end_date'])
+            ->map(function ($form) {
+                $sections = Section::where('form_id', $form['id'])->get(['id', 'name', 'section_uid', 'form_id']);
+                $questions = Question::where('form_id', $form['id'])->get(['id', 'question_uid', 'question', 'description', 'form_id', 'section_id'])->map(function ($question) {
+                    $answers = Answer::where('question_id', $question['id'])->get(['id', 'type', 'structure', 'question_id'])->map(function ($answer) {
+                        $answer['structure'] = json_decode($answer['structure']);
+                        return $answer;
+                    });
+                    $question['answers'] = $answers;
+                    return $question;
+                });
+                $form['participants'] = Response::where('form_id', $form['id'])->count();
 
-        return Inertia::render('welcome', ['forms' => $forms]);
+                // compute timeline-based state
+                $now = \Carbon\Carbon::now()->startOfDay();
+                $begin = $form['begin_date'] ? \Carbon\Carbon::parse($form['begin_date']) : null;
+                $end = $form['end_date'] ? \Carbon\Carbon::parse($form['end_date']) : null;
+                $state = 'unknown';
+                if ($begin && $end) {
+                    if ($now->between($begin, $end, true)) {
+                        $state = 'active';
+                    } elseif ($now->lt($begin)) {
+                        $state = 'upcoming';
+                    } elseif ($now->gt($end)) {
+                        $state = 'expired';
+                    }
+                }
+                $form['state'] = $state;
+                $form['sections'] = $sections;
+                $form['questions'] = $questions;
+                return $form;
+            });
+
+        return Inertia::render('welcome', [
+            'forms' => $forms,
+            'search' => $searchTerm,
+            'status' => $statusFilter
+        ]);
+    }
+
+    function search(Request $request)
+    {
+        $searchTerm = $request->query('search', '');
+        $statusFilter = $request->query('status', 'all');
+
+        $query = Form::query();
+
+        // Apply search filter
+        if (!empty($searchTerm)) {
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('name', 'LIKE', "%{$searchTerm}%")
+                    ->orWhere('description', 'LIKE', "%{$searchTerm}%");
+            });
+        }
+
+        // Apply status filter
+        if ($statusFilter !== 'all') {
+            $now = \Carbon\Carbon::now()->startOfDay();
+
+            switch ($statusFilter) {
+                case 'active':
+                    $query->where('published', 1)
+                        ->where('begin_date', '<=', $now)
+                        ->where('end_date', '>=', $now);
+                    break;
+                case 'upcoming':
+                    $query->where('begin_date', '>', $now);
+                    break;
+                case 'expired':
+                    $query->where('end_date', '<', $now);
+                    break;
+            }
+        }
+
+        $forms = $query->get(['id', 'form_uid', 'name', 'description', 'published', 'status', 'begin_date', 'end_date'])
+            ->map(function ($form) {
+                $sections = Section::where('form_id', $form['id'])->get(['id', 'name', 'section_uid', 'form_id']);
+                $questions = Question::where('form_id', $form['id'])->get(['id', 'question_uid', 'question', 'description', 'form_id', 'section_id'])->map(function ($question) {
+                    $answers = Answer::where('question_id', $question['id'])->get(['id', 'type', 'structure', 'question_id'])->map(function ($answer) {
+                        $answer['structure'] = json_decode($answer['structure']);
+                        return $answer;
+                    });
+                    $question['answers'] = $answers;
+                    return $question;
+                });
+                $form['participants'] = Response::where('form_id', $form['id'])->count();
+
+                // compute timeline-based state
+                $now = \Carbon\Carbon::now()->startOfDay();
+                $begin = $form['begin_date'] ? \Carbon\Carbon::parse($form['begin_date']) : null;
+                $end = $form['end_date'] ? \Carbon\Carbon::parse($form['end_date']) : null;
+                $state = 'unknown';
+                if ($begin && $end) {
+                    if ($now->between($begin, $end, true)) {
+                        $state = 'active';
+                    } elseif ($now->lt($begin)) {
+                        $state = 'upcoming';
+                    } elseif ($now->gt($end)) {
+                        $state = 'expired';
+                    }
+                }
+                $form['state'] = $state;
+                $form['sections'] = $sections;
+                $form['questions'] = $questions;
+                return $form;
+            });
+
+        return response()->json(['forms' => $forms]);
     }
 
     function createView(Request $request)

@@ -29,6 +29,7 @@ function PreviewContent({ form }) {
 
     // Use the fresh data from the backend instead of localStorage
     let formState = form;
+    console.log(formState.form);
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
@@ -74,70 +75,16 @@ function PreviewContent({ form }) {
 
             <div className="max-w-4xl mx-auto px-6 py-8">
                 {/* Survey Header */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-8">
-                    <div className="text-center mb-6">
-                        <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <FiFileText className="w-8 h-8 text-blue-600" />
-                        </div>
+                <div className="text-black bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-8">
+                    <div className="text-center">
                         <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                            {formState.title}
+                            {formState.form.name}
                         </h2>
-                        {formState.description && (
+                        {formState.form.description && (
                             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                                {formState.description}
+                                {formState.form.description}
                             </p>
                         )}
-                    </div>
-
-                    {/* Survey Info */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8 pt-6 border-t border-gray-200">
-                        <div className="flex items-center gap-3">
-                            <div className="bg-green-100 p-2 rounded-lg">
-                                <FiCheckCircle className="w-5 h-5 text-green-600" />
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-gray-600">
-                                    Status
-                                </p>
-                                <p className="text-lg font-semibold text-gray-900">
-                                    Draft
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                            <div className="bg-purple-100 p-2 rounded-lg">
-                                <FiUsers className="w-5 h-5 text-purple-600" />
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-gray-600">
-                                    Questions
-                                </p>
-                                <p className="text-lg font-semibold text-gray-900">
-                                    {formState.questions.length}
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                            <div className="bg-orange-100 p-2 rounded-lg">
-                                <FiCalendar className="w-5 h-5 text-orange-600" />
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-gray-600">
-                                    Timeline
-                                </p>
-                                <p className="text-lg font-semibold text-gray-900">
-                                    {formState.begin_date && formState.end_date
-                                        ? `${moment(
-                                              formState.begin_date
-                                          ).format("MMM DD")} - ${moment(
-                                              formState.end_date
-                                          ).format("MMM DD, YYYY")}`
-                                        : "Not set"}
-                                </p>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
@@ -398,6 +345,7 @@ function PreviewContent({ form }) {
                                         { preserveState: true }
                                     );
                                 }}
+                                className="p-1 px-2 bg-green-500 hover:bg-green-600 text-white cursor-pointer"
                             >
                                 <TbZoomQuestion className="w-4 h-4 mr-2" />
                                 Test Survey
@@ -405,6 +353,7 @@ function PreviewContent({ form }) {
                             <Button
                                 variant="outline"
                                 onClick={() => window.close()}
+                                className="p-1 px-2 bg-red-500 hover:bg-red-600 text-white cursor-pointer"
                             >
                                 Close Preview
                             </Button>

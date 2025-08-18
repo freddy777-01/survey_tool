@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useCallback } from "react";
 import Layout from "./Layout";
 import ActionBar from "@/Components/ActionBar";
 import Question from "@/Components/Question";
@@ -66,16 +66,70 @@ function getStatusIcon(status) {
     }
 }
 
-function welcome({ forms }) {
-    const [filter, setFilter] = useState("all");
-    const [viewMode, setViewMode] = useState("grid"); // grid or list
+function welcome({
+    forms: initialForms,
+    search: searchQuery = "",
+    status: statusQuery = "all",
+}) {
+    const [forms, setForms] = useState(initialForms);
+    const [filter, setFilter] = useState(statusQuery);
+    const [searchTerm, setSearchTerm] = useState(searchQuery);
     const [showModal, setShowModal] = useState(false);
     const [modalMessage, setModalMessage] = useState("");
+    const [isSearching, setIsSearching] = useState(false);
 
-    const filteredForms = useMemo(() => {
-        if (filter === "all") return forms;
-        return forms.filter((f) => getComputedState(f) === filter);
-    }, [forms, filter]);
+    // Debounced search function
+    const debouncedSearch = useCallback(
+        (() => {
+            let timeoutId;
+            return (search, status) => {
+                clearTimeout(timeoutId);
+                setIsSearching(true);
+                timeoutId = setTimeout(() => {
+                    const params = new URLSearchParams({
+                        search: search.trim(),
+                        status: status,
+                    });
+
+                    fetch(`/search-surveys?${params}`)
+                        .then((response) => response.json())
+                        .then((data) => {
+                            // Update the forms state with the search results
+                            setForms(data.forms || []);
+                            setIsSearching(false);
+                        })
+                        .catch((error) => {
+                            console.error("Search error:", error);
+                            setIsSearching(false);
+                            // Keep current forms on error
+                        });
+                }, 200); // 200ms delay for faster response
+            };
+        })(),
+        []
+    );
+
+    // Handle search input change
+    const handleSearchChange = (value) => {
+        setSearchTerm(value);
+        debouncedSearch(value, filter);
+    };
+
+    // Handle filter change
+    const handleFilterChange = (value) => {
+        setFilter(value);
+        debouncedSearch(searchTerm, value);
+    };
+
+    // Use forms directly since they come from backend search
+    const filteredForms = forms;
+
+    // Handle initial search if query parameters exist
+    useEffect(() => {
+        if (searchQuery || statusQuery !== "all") {
+            debouncedSearch(searchQuery, statusQuery);
+        }
+    }, []); // Only run once on component mount
 
     // Calculate statistics
     const stats = useMemo(() => {
@@ -134,548 +188,369 @@ function welcome({ forms }) {
 
     return (
         <Layout>
-            {/* Header Section */}
-            <div className="rounded-xl p-6 mb-8 bg-blue-300 font-bold text-white">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold mb-2">
-                            Survey Dashboard
-                        </h1>
-                        <p className="text-white">
-                            Manage and monitor your surveys
-                        </p>
-                    </div>
-                    <Button
-                        onClick={() => router.get("/survey/create")}
-                        className="ml-5 bg-blue-300 text-blue-600 hover:bg-blue-400 px-6 py-3 rounded-lg font-semibold flex items-center gap-2"
-                    >
-                        <FiPlus className="w-5 h-5" />
-                        Create Survey
-                    </Button>
-                </div>
+            {/* Header Section - Green Circle */}
+            <div className="text-center mb-8">
+                <h1 className="text-4xl font-bold text-gray-900 mb-2">
+                    Surveys
+                </h1>
+                <p className="text-gray-600 text-lg">
+                    manage and monitor your surveys
+                </p>
             </div>
 
-            {/* Statistics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-gray-600 text-sm font-medium">
-                                Total Surveys
-                            </p>
-                            <p className="text-3xl font-bold text-gray-900">
-                                {stats.total}
-                            </p>
-                        </div>
-                        <div className="bg-blue-100 p-3 rounded-lg">
-                            <FcSurvey className="w-8 h-8" />
-                        </div>
-                    </div>
-                </div>
-
-                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-gray-600 text-sm font-medium">
-                                Active Surveys
-                            </p>
-                            <p className="text-3xl font-bold text-green-600">
-                                {stats.active}
-                            </p>
-                        </div>
-                        <div className="bg-green-100 p-3 rounded-lg">
-                            <FiTrendingUp className="w-8 h-8 text-green-600" />
-                        </div>
-                    </div>
-                </div>
-
-                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-gray-600 text-sm font-medium">
-                                Published
-                            </p>
-                            <p className="text-3xl font-bold text-purple-600">
-                                {stats.published}
-                            </p>
-                        </div>
-                        <div className="bg-purple-100 p-3 rounded-lg">
-                            <FiCheckCircle className="w-8 h-8 text-purple-600" />
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Filters and Controls */}
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-6">
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                        <h2 className="text-xl font-semibold text-gray-900">
-                            Your Surveys
-                        </h2>
-                        <div className="flex items-center gap-2">
-                            <label className="text-sm font-medium text-gray-700">
-                                Filter:
-                            </label>
-                            <select
-                                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                value={filter}
-                                onChange={(e) => setFilter(e.target.value)}
-                            >
-                                <option value="all">All Surveys</option>
-                                <option value="active">Active</option>
-                                <option value="upcoming">Upcoming</option>
-                                <option value="expired">Expired</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
+            {/* Main Content with Sidebar */}
+            <div className="flex gap-6">
+                {/* Left Sidebar - Red Circle */}
+                <div className="w-64 flex-shrink-0">
+                    <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
                         <Button
-                            variant={
-                                viewMode === "grid" ? "default" : "outline"
-                            }
-                            size="sm"
-                            onClick={() => setViewMode("grid")}
-                            className="p-1 px-2 flex items-center gap-2"
+                            onClick={() => router.get("/survey/create")}
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2 justify-center"
                         >
-                            <FiGrid className="w-4 h-4" />
-                            Grid
+                            <FiPlus className="w-5 h-5" />
+                            Create Survey
                         </Button>
-                        <Button
-                            variant={
-                                viewMode === "list" ? "default" : "outline"
-                            }
-                            size="sm"
-                            onClick={() => setViewMode("list")}
-                            className="p-1 px-2 flex items-center gap-2"
-                        >
-                            <FiList className="w-4 h-4" />
-                            List
-                        </Button>
+                        {/* Space for future buttons */}
+                        <div className="mt-4 space-y-2">
+                            {/* Future buttons can be added here */}
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Surveys Grid/List */}
-            {filteredForms.length > 0 ? (
-                <div
-                    className={
-                        viewMode === "grid"
-                            ? filteredForms.length === 1
-                                ? "flex justify-center"
-                                : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-                            : "space-y-4"
-                    }
-                >
-                    {filteredForms.map((form, index) => (
-                        <div
-                            key={form.form_uid}
-                            className={`bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-300 overflow-hidden ${
-                                viewMode === "list"
-                                    ? "flex items-center p-6"
-                                    : filteredForms.length === 1 &&
-                                      viewMode === "grid"
-                                    ? "p-6 max-w-md w-full"
-                                    : "p-6"
-                            }`}
-                        >
-                            {viewMode === "grid" ? (
-                                // Grid View
-                                <>
-                                    <div className="flex items-start justify-between mb-4">
-                                        <div className="flex-1">
-                                            <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
-                                                {form.name}
-                                            </h3>
-                                            <p className="text-gray-600 text-sm line-clamp-2">
-                                                {form.description ||
-                                                    "No description provided"}
-                                            </p>
-                                        </div>
+                {/* Main Content Area */}
+                <div className="flex-1">
+                    {/* Statistics Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-gray-600 text-sm font-medium">
+                                        Total Surveys
+                                    </p>
+                                    <p className="text-3xl font-bold text-gray-900">
+                                        {stats.total}
+                                    </p>
+                                </div>
+                                <div className="bg-blue-100 p-3 rounded-lg">
+                                    <FcSurvey className="w-8 h-8" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-gray-600 text-sm font-medium">
+                                        Active Surveys
+                                    </p>
+                                    <p className="text-3xl font-bold text-green-600">
+                                        {stats.active}
+                                    </p>
+                                </div>
+                                <div className="bg-green-100 p-3 rounded-lg">
+                                    <FiTrendingUp className="w-8 h-8 text-green-600" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-gray-600 text-sm font-medium">
+                                        Published
+                                    </p>
+                                    <p className="text-3xl font-bold text-purple-600">
+                                        {stats.published}
+                                    </p>
+                                </div>
+                                <div className="bg-purple-100 p-3 rounded-lg">
+                                    <FiCheckCircle className="w-8 h-8 text-purple-600" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Search and Filters - Yellow Circle */}
+                    <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-6">
+                        <div className="flex items-center gap-4">
+                            <div className="flex-1 relative">
+                                <input
+                                    type="text"
+                                    placeholder="Search survey title or description..."
+                                    value={searchTerm}
+                                    onChange={(e) =>
+                                        handleSearchChange(e.target.value)
+                                    }
+                                    className={`w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                                        isSearching ? "pr-10" : ""
+                                    }`}
+                                />
+                                {isSearching && (
+                                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
                                     </div>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <label className="text-sm font-medium text-gray-700">
+                                    Status:
+                                </label>
+                                <select
+                                    className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    value={filter}
+                                    onChange={(e) =>
+                                        handleFilterChange(e.target.value)
+                                    }
+                                >
+                                    <option value="all">All Surveys</option>
+                                    <option value="active">Active</option>
+                                    <option value="upcoming">Upcoming</option>
+                                    <option value="expired">Expired</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
 
-                                    <div className="space-y-3 mb-6">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-sm text-gray-600">
+                    {/* Surveys Table */}
+                    {filteredForms.length > 0 ? (
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8">
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead className="bg-gray-50 border-b border-gray-200">
+                                        <tr>
+                                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-700">
+                                                Survey
+                                            </th>
+                                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-700">
                                                 Status
-                                            </span>
-                                            <span
-                                                className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(
-                                                    getComputedState(form)
-                                                )}`}
-                                            >
-                                                {getStatusIcon(
-                                                    getComputedState(form)
-                                                )}
-                                                {getComputedState(form)}
-                                            </span>
-                                        </div>
-
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-sm text-gray-600">
-                                                Published
-                                            </span>
-                                            <span
-                                                className={`text-sm font-medium ${
-                                                    form.published
-                                                        ? "text-green-600"
-                                                        : "text-red-600"
-                                                }`}
-                                            >
-                                                {form.published ? "Yes" : "No"}
-                                            </span>
-                                        </div>
-
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-sm text-gray-600">
-                                                Participants
-                                            </span>
-                                            <span className="text-sm font-medium text-gray-900">
-                                                {form.participants ?? 0}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex flex-wrap gap-2">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="p-1 px-2 bg-blue-400 hover:bg-blue-500 text-white flex items-center gap-1"
-                                            onClick={() => {
-                                                router.get(
-                                                    "/survey/board",
-                                                    { form_uid: form.form_uid },
-                                                    { preserveState: true }
-                                                );
-                                            }}
-                                        >
-                                            <FiBarChart2 className="w-4 h-4" />
-                                            View
-                                        </Button>
-
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="p-1 px-2 flex items-center gap-1 bg-blue-400 hover:bg-blue-500 text-white"
-                                            onClick={() => {
-                                                const url = `/preview?form_uid=${form.form_uid}`;
-                                                window.open(url, "_blank");
-                                            }}
-                                        >
-                                            <FiEye className="w-4 h-4" />
-                                            Preview
-                                        </Button>
-
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="p-1 px-2 bg-blue-400 hover:bg-blue-500 text-white flex items-center gap-1"
-                                            onClick={() => {
-                                                handleAttendClick(form);
-                                            }}
-                                        >
-                                            <FiUsers className="w-4 h-4" />
-                                            Attend
-                                        </Button>
-
-                                        {form.published ? (
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="p-1 px-2 flex items-center gap-1 text-red-600 border-red-200 hover:bg-red-50"
-                                                onClick={async () => {
-                                                    if (
-                                                        confirm(
-                                                            "Unpublish this survey? It will no longer be available for participation."
-                                                        )
-                                                    ) {
-                                                        try {
-                                                            const response =
-                                                                await unpublishSurvey(
-                                                                    {
-                                                                        form_uid:
-                                                                            form.form_uid,
-                                                                    }
-                                                                );
-
-                                                            const data =
-                                                                await response.json();
-                                                            if (response.ok) {
-                                                                toast.success(
-                                                                    data.message
-                                                                );
-                                                                window.location.reload();
-                                                            } else {
-                                                                toast.error(
-                                                                    "Failed to unpublish survey"
-                                                                );
-                                                            }
-                                                        } catch (error) {
-                                                            toast.error(
-                                                                "Failed to unpublish survey"
-                                                            );
-                                                            console.error(
-                                                                error
-                                                            );
-                                                        }
-                                                    }
+                                            </th>
+                                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-700">
+                                                Timeline
+                                            </th>
+                                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-700">
+                                                Action
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-200">
+                                        {filteredForms.map((form) => (
+                                            <tr
+                                                key={form.form_uid}
+                                                className="hover:bg-gray-50 cursor-pointer transition-colors duration-200"
+                                                onClick={() => {
+                                                    router.get(
+                                                        "/survey/board",
+                                                        {
+                                                            form_uid:
+                                                                form.form_uid,
+                                                        },
+                                                        { preserveState: true }
+                                                    );
                                                 }}
                                             >
-                                                <FiXCircle className="w-4 h-4" />
-                                                Unpublish
-                                            </Button>
-                                        ) : (
-                                            <Button
-                                                variant="default"
-                                                size="sm"
-                                                className="p-1 px-2 flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white"
-                                                onClick={async () => {
-                                                    try {
-                                                        const response =
-                                                            await publishSurvey(
-                                                                {
+                                                <td className="px-6 py-4">
+                                                    <div>
+                                                        <h3 className="text-sm font-semibold text-gray-900 mb-1">
+                                                            {form.name}
+                                                        </h3>
+                                                        <p className="text-xs text-gray-600 line-clamp-2">
+                                                            {form.description ||
+                                                                "No description provided"}
+                                                        </p>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span
+                                                        className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(
+                                                            getComputedState(
+                                                                form
+                                                            )
+                                                        )}`}
+                                                    >
+                                                        {getStatusIcon(
+                                                            getComputedState(
+                                                                form
+                                                            )
+                                                        )}
+                                                        {getComputedState(form)}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="text-sm text-gray-600">
+                                                        {form.begin_date &&
+                                                        form.end_date ? (
+                                                            <div>
+                                                                <div className="font-medium">
+                                                                    {new Date(
+                                                                        form.begin_date
+                                                                    ).toLocaleDateString()}
+                                                                </div>
+                                                                <div className="text-xs text-gray-500">
+                                                                    to{" "}
+                                                                    {new Date(
+                                                                        form.end_date
+                                                                    ).toLocaleDateString()}
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-gray-400">
+                                                                No timeline set
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="px-3 py-1 text-xs bg-green-600 hover:bg-green-700 text-white border-green-600"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (
+                                                                !form.published
+                                                            ) {
+                                                                publishSurvey({
                                                                     form_uid:
                                                                         form.form_uid,
                                                                     begin_date:
                                                                         form.begin_date,
                                                                     end_date:
                                                                         form.end_date,
-                                                                }
-                                                            );
-
-                                                        const data =
-                                                            await response.json();
-                                                        if (response.ok) {
-                                                            toast.success(
-                                                                data.message
-                                                            );
-                                                            window.location.reload();
-                                                        } else {
-                                                            toast.error(
-                                                                data.error ||
-                                                                    "Failed to publish survey"
-                                                            );
-                                                        }
-                                                    } catch (error) {
-                                                        toast.error(
-                                                            "Failed to publish survey"
-                                                        );
-                                                        console.error(error);
-                                                    }
-                                                }}
-                                            >
-                                                <FiEdit3 className="w-4 h-4" />
-                                                Publish
-                                            </Button>
-                                        )}
-                                    </div>
-                                </>
-                            ) : (
-                                // List View
-                                <>
-                                    <div className="flex-1">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <h3 className="text-lg font-semibold text-gray-900">
-                                                {form.name}
-                                            </h3>
-                                            <span
-                                                className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(
-                                                    getComputedState(form)
-                                                )}`}
-                                            >
-                                                {getStatusIcon(
-                                                    getComputedState(form)
-                                                )}
-                                                {getComputedState(form)}
-                                            </span>
-                                        </div>
-                                        <p className="text-gray-600 text-sm mb-2">
-                                            {form.description ||
-                                                "No description provided"}
-                                        </p>
-                                        <div className="flex items-center gap-6 text-sm text-gray-600">
-                                            <span>
-                                                Published:{" "}
-                                                <span
-                                                    className={`font-medium ${
-                                                        form.published
-                                                            ? "text-green-600"
-                                                            : "text-red-600"
-                                                    }`}
-                                                >
-                                                    {form.published
-                                                        ? "Yes"
-                                                        : "No"}
-                                                </span>
-                                            </span>
-                                            <span>
-                                                Participants:{" "}
-                                                <span className="font-medium text-gray-900">
-                                                    {form.participants ?? 0}
-                                                </span>
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-2">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="flex items-center gap-1"
-                                            onClick={() => {
-                                                router.get(
-                                                    "/survey/board",
-                                                    { form_uid: form.form_uid },
-                                                    { preserveState: true }
-                                                );
-                                            }}
-                                        >
-                                            <FiBarChart2 className="w-4 h-4" />
-                                            Statistics
-                                        </Button>
-
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="flex items-center gap-1"
-                                            onClick={() => {
-                                                const url = `/preview?form_uid=${form.form_uid}`;
-                                                window.open(url, "_blank");
-                                            }}
-                                        >
-                                            <FiEye className="w-4 h-4" />
-                                            Preview
-                                        </Button>
-
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="flex items-center gap-1"
-                                            onClick={() => {
-                                                handleAttendClick(form);
-                                            }}
-                                        >
-                                            <FiUsers className="w-4 h-4" />
-                                            Attend
-                                        </Button>
-
-                                        {form.published ? (
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="flex items-center gap-1 text-red-600 border-red-200 hover:bg-red-50"
-                                                onClick={async () => {
-                                                    if (
-                                                        confirm(
-                                                            "Unpublish this survey? It will no longer be available for participation."
-                                                        )
-                                                    ) {
-                                                        try {
-                                                            const response =
-                                                                await unpublishSurvey(
-                                                                    {
-                                                                        form_uid:
-                                                                            form.form_uid,
-                                                                    }
-                                                                );
-
-                                                            const data =
-                                                                await response.json();
-                                                            if (response.ok) {
-                                                                toast.success(
-                                                                    data.message
-                                                                );
-                                                                window.location.reload();
+                                                                })
+                                                                    .then(
+                                                                        (
+                                                                            response
+                                                                        ) =>
+                                                                            response.json()
+                                                                    )
+                                                                    .then(
+                                                                        (
+                                                                            data
+                                                                        ) => {
+                                                                            if (
+                                                                                data.message
+                                                                            ) {
+                                                                                toast.success(
+                                                                                    data.message
+                                                                                );
+                                                                            }
+                                                                            router.reload();
+                                                                        }
+                                                                    )
+                                                                    .catch(
+                                                                        (
+                                                                            error
+                                                                        ) => {
+                                                                            toast.error(
+                                                                                "Failed to publish survey"
+                                                                            );
+                                                                        }
+                                                                    );
                                                             } else {
-                                                                toast.error(
-                                                                    "Failed to unpublish survey"
-                                                                );
+                                                                unpublishSurvey(
+                                                                    form.form_uid
+                                                                )
+                                                                    .then(
+                                                                        (
+                                                                            response
+                                                                        ) =>
+                                                                            response.json()
+                                                                    )
+                                                                    .then(
+                                                                        (
+                                                                            data
+                                                                        ) => {
+                                                                            if (
+                                                                                data.message
+                                                                            ) {
+                                                                                toast.success(
+                                                                                    data.message
+                                                                                );
+                                                                            }
+                                                                            router.reload();
+                                                                        }
+                                                                    )
+                                                                    .catch(
+                                                                        (
+                                                                            error
+                                                                        ) => {
+                                                                            toast.error(
+                                                                                "Failed to unpublish survey"
+                                                                            );
+                                                                        }
+                                                                    );
                                                             }
-                                                        } catch (error) {
-                                                            toast.error(
-                                                                "Failed to unpublish survey"
-                                                            );
-                                                            console.error(
-                                                                error
-                                                            );
-                                                        }
-                                                    }
-                                                }}
-                                            >
-                                                <FiXCircle className="w-4 h-4" />
-                                                Unpublish
-                                            </Button>
-                                        ) : (
-                                            <Button
-                                                variant="default"
-                                                size="sm"
-                                                className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white"
-                                                onClick={async () => {
-                                                    try {
-                                                        const response =
-                                                            await publishSurvey(
-                                                                {
-                                                                    form_uid:
-                                                                        form.form_uid,
-                                                                    begin_date:
-                                                                        form.begin_date,
-                                                                    end_date:
-                                                                        form.end_date,
-                                                                }
-                                                            );
-
-                                                        const data =
-                                                            await response.json();
-                                                        if (response.ok) {
-                                                            toast.success(
-                                                                data.message
-                                                            );
-                                                            window.location.reload();
-                                                        } else {
-                                                            toast.error(
-                                                                data.error ||
-                                                                    "Failed to publish survey"
-                                                            );
-                                                        }
-                                                    } catch (error) {
-                                                        toast.error(
-                                                            "Failed to publish survey"
-                                                        );
-                                                        console.error(error);
-                                                    }
-                                                }}
-                                            >
-                                                <FiEdit3 className="w-4 h-4" />
-                                                Publish
-                                            </Button>
-                                        )}
-                                    </div>
-                                </>
-                            )}
+                                                        }}
+                                                    >
+                                                        {form.published
+                                                            ? "Unpublish"
+                                                            : "Publish"}
+                                                    </Button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                    ))}
+                    ) : (
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8">
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead className="bg-gray-50 border-b border-gray-200">
+                                        <tr>
+                                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-700">
+                                                Survey
+                                            </th>
+                                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-700">
+                                                Status
+                                            </th>
+                                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-700">
+                                                Timeline
+                                            </th>
+                                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-700">
+                                                Action
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td
+                                                colSpan="4"
+                                                className="px-6 py-12 text-center"
+                                            >
+                                                <FcSurvey className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                                                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                                                    No surveys found
+                                                </h3>
+                                                <p className="text-gray-600 mb-6">
+                                                    {filter === "all" &&
+                                                    !searchTerm.trim()
+                                                        ? "You haven't created any surveys yet. Get started by creating your first survey!"
+                                                        : searchTerm.trim()
+                                                        ? `No surveys found matching "${searchTerm}". Try adjusting your search or filters.`
+                                                        : `No ${filter} surveys found. Try changing the filter or create a new survey.`}
+                                                </p>
+                                                <Button
+                                                    onClick={() =>
+                                                        router.get(
+                                                            "/survey/create"
+                                                        )
+                                                    }
+                                                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2 mx-auto"
+                                                >
+                                                    <FiPlus className="w-5 h-5" />
+                                                    Create Your First Survey
+                                                </Button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
                 </div>
-            ) : (
-                <div className="bg-white rounded-xl p-12 text-center shadow-sm border border-gray-100">
-                    <FcSurvey className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                        No surveys found
-                    </h3>
-                    <p className="text-gray-600 mb-6">
-                        {filter === "all"
-                            ? "You haven't created any surveys yet. Get started by creating your first survey!"
-                            : `No ${filter} surveys found. Try changing the filter or create a new survey.`}
-                    </p>
-                    <Button
-                        onClick={() => router.get("/survey/create")}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2 mx-auto"
-                    >
-                        <FiPlus className="w-5 h-5" />
-                        Create Your First Survey
-                    </Button>
-                </div>
-            )}
+            </div>
 
             {/* Modal for inactive survey notification */}
             {showModal && (

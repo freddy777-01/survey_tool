@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Layout from "../Layout";
 import ActionBar from "@/Components/ActionBar";
 import { Button } from "@/Components/ui/button";
@@ -10,6 +10,7 @@ import { ToastContainer, toast } from "react-toastify";
 import { MdEditNote } from "react-icons/md";
 import DatePicker from "../../Components/DatePicker";
 import moment from "moment";
+import QuestionArranger from "@/Components/QuestionArranger";
 import {
     FiPlus,
     FiCalendar,
@@ -17,16 +18,8 @@ import {
     FiSettings,
     FiCheckCircle,
     FiAlertCircle,
+    FiMove,
 } from "react-icons/fi";
-
-//TODO
-/**
- *
- * 1.  add side card to add extra information that will indicate from time and end time for the survey
- * 2. the form will not be published if start and end time are not set
- *
- *  On form creation, user should be directed first to add section if sections are to be added first
- */
 
 function FormContent() {
     const formContext = React.useContext(FormContext);
@@ -78,7 +71,7 @@ function FormContent() {
             </div>
 
             <div className="max-w-7xl mx-auto px-6 py-8">
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
                     {/* Main Content */}
                     <div className="lg:col-span-3">
                         {/* Form Header */}
@@ -181,13 +174,22 @@ function FormContent() {
 
                             {formContext.getFormQuestions().length > 0 ? (
                                 <div className="space-y-4">
-                                    {formContext.getFormQuestions().map((q) => (
-                                        <Question
-                                            questionId={q.question_uid}
-                                            key={q.question_uid}
-                                            question={q}
-                                        />
-                                    ))}
+                                    {formContext
+                                        .getFormQuestions()
+                                        .map((q, index) => (
+                                            <div
+                                                key={q.question_uid}
+                                                className="relative"
+                                            >
+                                                <div className="absolute -left-2 top-4 w-6 h-6 bg-green-100 text-green-600 rounded flex items-center justify-center text-xs font-semibold z-10">
+                                                    {index + 1}
+                                                </div>
+                                                <Question
+                                                    questionId={q.question_uid}
+                                                    question={q}
+                                                />
+                                            </div>
+                                        ))}
                                 </div>
                             ) : (
                                 <div className="text-center py-12">
@@ -212,9 +214,9 @@ function FormContent() {
                     </div>
 
                     {/* Sidebar */}
-                    <div className="lg:col-span-1 space-y-6">
+                    <div className="lg:col-span-2 space-y-4">
                         {/* Timeline Card */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="bg-orange-100 p-2 rounded-lg">
                                     <FiCalendar className="w-5 h-5 text-orange-600" />
@@ -307,7 +309,7 @@ function FormContent() {
                         </div>
 
                         {/* Sections Card */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="bg-green-100 p-2 rounded-lg">
                                     <FiSettings className="w-5 h-5 text-green-600" />
@@ -325,7 +327,7 @@ function FormContent() {
                         </div>
 
                         {/* Form Status */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
                             <h3 className="font-semibold text-gray-900 mb-4">
                                 Form Status
                             </h3>
@@ -392,6 +394,23 @@ function FormContent() {
                                 </div>
                             </div>
                         </div>
+
+                        {/* Question Arranger */}
+                        {formContext.getFormQuestions().length > 0 && (
+                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                                <QuestionArranger
+                                    questions={formContext.getFormQuestions()}
+                                    sections={formContext.getSections()}
+                                    onClose={() => {}}
+                                    onApplyOrder={(newOrder) => {
+                                        formContext.reorderQuestions(newOrder);
+                                        toast.success(
+                                            "Question order updated successfully!"
+                                        );
+                                    }}
+                                />
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

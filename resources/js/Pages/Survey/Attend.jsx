@@ -3,25 +3,121 @@ import Layout from "@/Pages/Layout";
 import { Button } from "@/Components/ui/button";
 import { makeApiRequest } from "@/utilities/api";
 import { router } from "@inertiajs/react";
+import ResumeDialog from "@/Components/ResumeDialog";
 
-const TextAreaWithFocus = ({
-    question_uid,
-    structure_id,
-    initialValue,
-    onAnswerChange,
+// Component for Multiple Choice questions
+const MultipleChoiceComponent = ({
+    question,
+    answers,
+    setAnswer,
+    questionIndex,
 }) => {
-    const [localValue, setLocalValue] = useState(initialValue);
+    return (
+        <div className="space-y-2">
+            {question.answer.structure.map((opt, i) => {
+                const inputId = `radio_${question.question_uid}_${opt.id || i}`;
+                return (
+                    <label
+                        key={opt.id || opt.value}
+                        htmlFor={inputId}
+                        className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded-xl cursor-pointer"
+                    >
+                        <input
+                            id={inputId}
+                            type="radio"
+                            name={`radio_${question.question_uid}`}
+                            value={opt.value}
+                            checked={
+                                answers[question.question_uid]?.[i]?.checked ||
+                                false
+                            }
+                            onChange={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                setAnswer(
+                                    question.question_uid,
+                                    event.target.value,
+                                    opt.id,
+                                    "multiple_choice"
+                                );
+                            }}
+                            onClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                            }}
+                            className="w-4 h-4 text-blue-600"
+                        />
+                        <span className="text-gray-700">{opt.value}</span>
+                    </label>
+                );
+            })}
+        </div>
+    );
+};
+
+// Component for Checkbox questions
+const CheckboxComponent = ({ question, answers, setAnswer, questionIndex }) => {
+    return (
+        <div className="space-y-2">
+            {question.answer.structure.map((opt, i) => {
+                const inputId = `checkbox_${question.question_uid}_${
+                    opt.id || i
+                }`;
+                return (
+                    <label
+                        key={opt.id || opt.value}
+                        htmlFor={inputId}
+                        className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded-xl cursor-pointer"
+                    >
+                        <input
+                            id={inputId}
+                            type="checkbox"
+                            value={opt.value}
+                            checked={
+                                answers[question.question_uid]?.[i]?.checked ||
+                                false
+                            }
+                            onChange={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setAnswer(
+                                    question.question_uid,
+                                    opt.value,
+                                    opt.id,
+                                    "check_box"
+                                );
+                            }}
+                            className="w-4 h-4 text-blue-600"
+                        />
+                        <span className="text-gray-700">{opt.value}</span>
+                    </label>
+                );
+            })}
+        </div>
+    );
+};
+
+// Component for Written/Text questions
+const WrittenComponent = ({ question, answers, setAnswer, questionIndex }) => {
+    const [localValue, setLocalValue] = useState(
+        answers[question.question_uid]?.value || ""
+    );
 
     useEffect(() => {
-        setLocalValue(initialValue);
-    }, [initialValue]);
+        setLocalValue(answers[question.question_uid]?.value || "");
+    }, [answers[question.question_uid]?.value]);
 
     const handleChange = (e) => {
         setLocalValue(e.target.value);
     };
 
     const handleBlur = () => {
-        onAnswerChange(question_uid, localValue, structure_id, "written");
+        setAnswer(
+            question.question_uid,
+            localValue,
+            question.answer.structure.id,
+            "written"
+        );
     };
 
     return (
@@ -36,6 +132,281 @@ const TextAreaWithFocus = ({
     );
 };
 
+// Component for Yes/No questions
+const YesNoComponent = ({ question, answers, setAnswer, questionIndex }) => {
+    return (
+        <div className="flex gap-6">
+            {["Yes", "No"].map((opt, i) => {
+                const inputId = `radio_${
+                    question.question_uid
+                }_${opt.toLowerCase()}`;
+                return (
+                    <label
+                        key={opt}
+                        htmlFor={inputId}
+                        className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded-xl cursor-pointer"
+                    >
+                        <input
+                            id={inputId}
+                            type="radio"
+                            name={`radio_${question.question_uid}`}
+                            value={opt}
+                            checked={
+                                answers[question.question_uid]?.value === opt
+                            }
+                            onChange={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setAnswer(
+                                    question.question_uid,
+                                    e.target.value,
+                                    null,
+                                    "yes_no"
+                                );
+                            }}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                            }}
+                            className="w-4 h-4 text-blue-600"
+                        />
+                        <span className="text-gray-700">{opt}</span>
+                    </label>
+                );
+            })}
+        </div>
+    );
+};
+
+// Component for Table Likert Scale questions
+const TableLikertScaleComponent = ({
+    question,
+    answers,
+    setAnswer,
+    questionIndex,
+}) => {
+    return (
+        <div className="overflow-x-auto">
+            <table className="w-full border border-gray-300">
+                <thead>
+                    <tr className="bg-gray-50">
+                        <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
+                            Statement
+                        </th>
+                        {question.answer.structure.options.map((option) => (
+                            <th
+                                key={option.id}
+                                className="border border-gray-300 px-3 py-2 text-center text-sm font-medium text-gray-700"
+                            >
+                                {option.value}
+                            </th>
+                        ))}
+                    </tr>
+                </thead>
+                <tbody>
+                    {question.answer.structure.statements.map(
+                        (statement, index) => (
+                            <tr key={statement.id}>
+                                <td className="border border-gray-300 px-3 py-2 text-sm">
+                                    {index + 1}. {statement.text}
+                                </td>
+                                {question.answer.structure.options.map(
+                                    (option) => (
+                                        <td
+                                            key={option.id}
+                                            className="border border-gray-300 px-3 py-2 text-center"
+                                        >
+                                            <input
+                                                id={`radio_${question.question_uid}_${statement.id}_${option.id}`}
+                                                type="radio"
+                                                name={`radio_${question.question_uid}_${statement.id}`}
+                                                value={option.value}
+                                                checked={
+                                                    answers[
+                                                        question.question_uid
+                                                    ]?.[statement.id] ===
+                                                    option.value
+                                                }
+                                                onChange={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    setAnswer(
+                                                        question.question_uid,
+                                                        e.target.value,
+                                                        statement.id,
+                                                        "likert_scale"
+                                                    );
+                                                }}
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                }}
+                                                className="cursor-pointer h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                                            />
+                                        </td>
+                                    )
+                                )}
+                            </tr>
+                        )
+                    )}
+                </tbody>
+            </table>
+        </div>
+    );
+};
+
+// Component for Simple Likert Scale questions
+const SimpleLikertScaleComponent = ({
+    question,
+    answers,
+    setAnswer,
+    questionIndex,
+}) => {
+    return (
+        <div className="flex flex-row gap-x-5 items-center p-2 text-sm">
+            {question.answer.structure.map((scale, index) => {
+                const inputId = `radio_${question.question_uid}_${
+                    scale.id || index
+                }`;
+                return (
+                    <div className="flex gap-x-1.5" key={index}>
+                        <input
+                            id={inputId}
+                            type="radio"
+                            value={scale.value}
+                            name={`radio_${question.question_uid}`}
+                            checked={
+                                answers[question.question_uid]?.value ===
+                                scale.value
+                            }
+                            onChange={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setAnswer(
+                                    question.question_uid,
+                                    e.target.value,
+                                    scale.id,
+                                    "likert_scale"
+                                );
+                            }}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                            }}
+                            className="cursor-pointer h-5 w-5 border focus:outline-none border-slate-300 transition-all checked:bg-blue-300 focus:ring-1 rounded-md p-1.5"
+                        />
+                        <label
+                            htmlFor={inputId}
+                            className="hover:cursor-pointer"
+                        >
+                            {scale.value}
+                        </label>
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
+// Main Question Component that renders the appropriate component based on type
+const QuestionComponent = ({ question, answers, setAnswer, questionIndex }) => {
+    const renderAnswerComponent = () => {
+        switch (question.answer?.type) {
+            case "multiple_choice":
+                return (
+                    <MultipleChoiceComponent
+                        question={question}
+                        answers={answers}
+                        setAnswer={setAnswer}
+                        questionIndex={questionIndex}
+                    />
+                );
+            case "check_box":
+                return (
+                    <CheckboxComponent
+                        question={question}
+                        answers={answers}
+                        setAnswer={setAnswer}
+                        questionIndex={questionIndex}
+                    />
+                );
+            case "written":
+                return (
+                    <WrittenComponent
+                        question={question}
+                        answers={answers}
+                        setAnswer={setAnswer}
+                        questionIndex={questionIndex}
+                    />
+                );
+            case "yes_no":
+                return (
+                    <YesNoComponent
+                        question={question}
+                        answers={answers}
+                        setAnswer={setAnswer}
+                        questionIndex={questionIndex}
+                    />
+                );
+            case "likert_scale":
+                if (
+                    question.answer.structure &&
+                    question.answer.structure.statements
+                ) {
+                    return (
+                        <TableLikertScaleComponent
+                            question={question}
+                            answers={answers}
+                            setAnswer={setAnswer}
+                            questionIndex={questionIndex}
+                        />
+                    );
+                } else {
+                    return (
+                        <SimpleLikertScaleComponent
+                            question={question}
+                            answers={answers}
+                            setAnswer={setAnswer}
+                            questionIndex={questionIndex}
+                        />
+                    );
+                }
+            default:
+                return (
+                    <div className="p-3 bg-red-100 border border-red-300 rounded text-red-700">
+                        <p>
+                            Error: This question has no answer structure
+                            defined.
+                        </p>
+                        <p>Question ID: {question.question_uid}</p>
+                        <p>Answer: {JSON.stringify(question.answer)}</p>
+                    </div>
+                );
+        }
+    };
+
+    return (
+        <div className="bg-white rounded-xl p-6 mb-6">
+            <div className="flex items-start gap-4">
+                {/* Question Number */}
+                <div className="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-semibold shadow-none">
+                    {questionIndex + 1}
+                </div>
+
+                {/* Question Content */}
+                <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                        {question.question}
+                    </h3>
+
+                    {/* Answer Component */}
+                    {renderAnswerComponent()}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 export default function Attend({ form }) {
     const { main, sections, questions } = form;
     const [answers, setAnswers] = useState({});
@@ -46,6 +417,13 @@ export default function Attend({ form }) {
     const [scrollPosition, setScrollPosition] = useState(0);
     const scrollPositionRef = useRef(0);
 
+    // Resume functionality states
+    const [showResumeDialog, setShowResumeDialog] = useState(false);
+    const [existingAnswers, setExistingAnswers] = useState(null);
+    const [lastUpdated, setLastUpdated] = useState(null);
+    const [isCheckingExisting, setIsCheckingExisting] = useState(true);
+
+    // console.log(form);
     // Prevent form submission and scrolling
     useEffect(() => {
         // Prevent scroll restoration
@@ -82,7 +460,7 @@ export default function Attend({ form }) {
         };
     }, []);
 
-    // Restore scroll position after state updates
+    // Restore scroll position after state updates - only when answers change
     useEffect(() => {
         const timer = setTimeout(() => {
             if (scrollPositionRef.current > 0) {
@@ -93,28 +471,29 @@ export default function Attend({ form }) {
         return () => clearTimeout(timer);
     }, [answers]);
 
-    // Additional scroll prevention
+    // Check for existing response on component mount
     useEffect(() => {
-        const preventScroll = (e) => {
-            if (
-                e.target.tagName === "INPUT" ||
-                e.target.tagName === "TEXTAREA"
-            ) {
-                const currentScroll = window.scrollY;
-                setTimeout(() => {
-                    window.scrollTo(0, currentScroll);
-                }, 0);
+        const checkExistingResponse = async () => {
+            try {
+                const response = await makeApiRequest(
+                    `/api/surveys/existing-response?form_uid=${main.form_uid}`
+                );
+                const data = await response.json();
+
+                if (data.has_existing_response) {
+                    setExistingAnswers(data.answers);
+                    setLastUpdated(data.last_updated);
+                    setShowResumeDialog(true);
+                }
+            } catch (error) {
+                console.error("Error checking existing response:", error);
+            } finally {
+                setIsCheckingExisting(false);
             }
         };
 
-        document.addEventListener("focusin", preventScroll);
-        document.addEventListener("focusout", preventScroll);
-
-        return () => {
-            document.removeEventListener("focusin", preventScroll);
-            document.removeEventListener("focusout", preventScroll);
-        };
-    }, []);
+        checkExistingResponse();
+    }, [main.form_uid]);
 
     useEffect(() => {
         setResultQuestion(questions);
@@ -164,11 +543,13 @@ export default function Attend({ form }) {
             }
         });
         setAnswers(answersSlot);
-    }, [questions]);
+    }, []); // Only run once on mount
 
     const setAnswer = (question_uid, value, structureId, type) => {
-        // Store current scroll position before state update
+        // Store current scroll position and active element before state update
         const currentScroll = window.scrollY;
+        const activeElement = document.activeElement;
+        const activeElementId = activeElement?.id;
 
         setAnswers((prev) => {
             if (type === "check_box") {
@@ -236,9 +617,16 @@ export default function Attend({ form }) {
             }
         });
 
-        // Restore scroll position after state update
+        // Restore scroll position and focus after state update
         setTimeout(() => {
             window.scrollTo(0, currentScroll);
+            // Try to restore focus to the same element by ID
+            if (activeElementId) {
+                const elementToFocus = document.getElementById(activeElementId);
+                if (elementToFocus && elementToFocus.focus) {
+                    elementToFocus.focus();
+                }
+            }
         }, 0);
     };
 
@@ -247,6 +635,84 @@ export default function Attend({ form }) {
         return sections.find((section) =>
             section.questions.some((q) => q.id === questionId)
         );
+    };
+
+    // Transform existing answer to match current format
+    const transformExistingAnswer = (question, existingValue) => {
+        if (question.answer.type === "likert_scale") {
+            if (
+                question.answer.structure &&
+                question.answer.structure.statements
+            ) {
+                // Table likert scale
+                return {
+                    name: question.answer.type,
+                    ...existingValue,
+                };
+            } else {
+                // Simple likert scale
+                return {
+                    name: question.answer.type,
+                    value: existingValue,
+                };
+            }
+        } else if (Array.isArray(question.answer.structure)) {
+            // Multiple choice or checkbox
+            return question.answer.structure.map((structure) => {
+                const isChecked = Array.isArray(existingValue)
+                    ? existingValue.includes(structure.value)
+                    : existingValue === structure.value;
+
+                return {
+                    structureId: structure.id,
+                    name: question.answer.type,
+                    value: structure.value,
+                    checked: isChecked,
+                };
+            });
+        } else {
+            // Written, yes_no, or other single value types
+            return {
+                structureId: question.answer.structure?.id,
+                name: question.answer.type,
+                value: existingValue,
+                checked: true,
+            };
+        }
+    };
+
+    // Load existing answers into the form
+    const loadExistingAnswers = () => {
+        if (!existingAnswers) return;
+
+        setAnswers((prev) => {
+            const updatedAnswers = { ...prev };
+
+            Object.keys(existingAnswers).forEach((questionUid) => {
+                const existingValue = existingAnswers[questionUid];
+                const question = questions.find(
+                    (q) => q.question_uid === questionUid
+                );
+
+                if (question) {
+                    updatedAnswers[questionUid] = transformExistingAnswer(
+                        question,
+                        existingValue
+                    );
+                }
+            });
+
+            return updatedAnswers;
+        });
+
+        setShowResumeDialog(false);
+    };
+
+    // Start fresh (ignore existing answers)
+    const startFresh = () => {
+        setShowResumeDialog(false);
+        setExistingAnswers(null);
+        setLastUpdated(null);
     };
 
     const submit = async () => {
@@ -326,17 +792,9 @@ export default function Attend({ form }) {
             if (res.ok) {
                 const data = await res.json();
 
-                // Mark this survey as attended in localStorage
-                const attendedSurveys = JSON.parse(
-                    localStorage.getItem("attendedSurveys") || "[]"
-                );
-                if (!attendedSurveys.includes(main.form_uid)) {
-                    attendedSurveys.push(main.form_uid);
-                    localStorage.setItem(
-                        "attendedSurveys",
-                        JSON.stringify(attendedSurveys)
-                    );
-                }
+                // Clear any existing answers state since survey is now completed
+                setExistingAnswers(null);
+                setLastUpdated(null);
 
                 setSubmitted(true);
                 setShowThankYouModal(true);
@@ -387,568 +845,42 @@ export default function Attend({ form }) {
             </h3>
             <div className="space-y-6">
                 {section.questions.map((q, questionIndex) => (
-                    <div
+                    <QuestionComponent
                         key={q.question_uid}
-                        className="border border-gray-200 rounded-lg p-4 bg-gray-50"
-                    >
-                        <p className="font-medium mb-3 text-gray-800">
-                            {q.question}
-                        </p>
-
-                        {q.answer?.type === "multiple_choice" &&
-                            q.answer?.structure && (
-                                <div className="space-y-2">
-                                    {q.answer.structure.map((opt, i) => (
-                                        <label
-                                            key={opt.id || opt.value}
-                                            className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded cursor-pointer"
-                                        >
-                                            <input
-                                                type="radio"
-                                                name={`q_${q.question_uid}`}
-                                                value={opt.value}
-                                                checked={
-                                                    answers[q.question_uid]?.[i]
-                                                        ?.checked || false
-                                                }
-                                                onChange={(e) => {
-                                                    e.preventDefault();
-                                                    e.stopPropagation();
-                                                    e.stopImmediatePropagation();
-                                                    setAnswer(
-                                                        q.question_uid,
-                                                        e.target.value,
-                                                        opt.id,
-                                                        "multiple_choice"
-                                                    );
-                                                }}
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    e.stopPropagation();
-                                                }}
-                                                onFocus={(e) => {
-                                                    e.preventDefault();
-                                                    e.stopPropagation();
-                                                }}
-                                                onBlur={(e) => {
-                                                    e.preventDefault();
-                                                    e.stopPropagation();
-                                                }}
-                                                className="w-4 h-4 text-blue-600"
-                                                style={{
-                                                    scrollBehavior: "auto",
-                                                }}
-                                            />
-                                            <span className="text-gray-700">
-                                                {opt.value}
-                                            </span>
-                                        </label>
-                                    ))}
-                                </div>
-                            )}
-                        {q.answer?.type === "check_box" &&
-                            q.answer?.structure && (
-                                <div className="space-y-2">
-                                    {q.answer.structure.map((opt, i) => (
-                                        <label
-                                            key={opt.id || opt.value}
-                                            className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded cursor-pointer"
-                                        >
-                                            <input
-                                                type="checkbox"
-                                                value={opt.value}
-                                                checked={
-                                                    answers[q.question_uid]?.[i]
-                                                        ?.checked || false
-                                                }
-                                                onChange={(e) => {
-                                                    e.preventDefault();
-                                                    setAnswer(
-                                                        q.question_uid,
-                                                        opt.value,
-                                                        opt.id,
-                                                        "check_box"
-                                                    );
-                                                }}
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    e.stopPropagation();
-                                                }}
-                                                className="w-4 h-4 text-blue-600"
-                                            />
-                                            <span className="text-gray-700">
-                                                {opt.value}
-                                            </span>
-                                        </label>
-                                    ))}
-                                </div>
-                            )}
-                        {q.answer?.type === "written" && (
-                            <TextAreaWithFocus
-                                question_uid={q.question_uid}
-                                structure_id={q.answer.structure.id}
-                                initialValue={
-                                    answers[q.question_uid]?.value || ""
-                                }
-                                onAnswerChange={setAnswer}
-                            />
-                        )}
-                        {q.answer?.type === "yes_no" && (
-                            <div className="flex gap-6">
-                                {["Yes", "No"].map((opt, i) => (
-                                    <label
-                                        key={opt}
-                                        className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded cursor-pointer"
-                                    >
-                                        <input
-                                            type="radio"
-                                            name={`q_${q.question_uid}`}
-                                            value={opt}
-                                            checked={
-                                                answers[q.question_uid]
-                                                    ?.value === opt
-                                            }
-                                            onChange={(e) => {
-                                                e.preventDefault();
-                                                setAnswer(
-                                                    q.question_uid,
-                                                    e.target.value,
-                                                    null,
-                                                    "yes_no"
-                                                );
-                                            }}
-                                            className="w-4 h-4 text-blue-600"
-                                        />
-                                        <span className="text-gray-700">
-                                            {opt}
-                                        </span>
-                                    </label>
-                                ))}
-                            </div>
-                        )}
-                        {q.answer?.type === "likert_scale" && (
-                            <>
-                                {q.answer.structure &&
-                                q.answer.structure.statements ? (
-                                    // Table Likert Scale
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full border border-gray-300">
-                                            <thead>
-                                                <tr className="bg-gray-50">
-                                                    <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
-                                                        Statement
-                                                    </th>
-                                                    {q.answer.structure.options.map(
-                                                        (option) => (
-                                                            <th
-                                                                key={option.id}
-                                                                className="border border-gray-300 px-3 py-2 text-center text-sm font-medium text-gray-700"
-                                                            >
-                                                                {option.value}
-                                                            </th>
-                                                        )
-                                                    )}
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {q.answer.structure.statements.map(
-                                                    (statement, index) => (
-                                                        <tr key={statement.id}>
-                                                            <td className="border border-gray-300 px-3 py-2 text-sm">
-                                                                {index + 1}.{" "}
-                                                                {statement.text}
-                                                            </td>
-                                                            {q.answer.structure.options.map(
-                                                                (option) => (
-                                                                    <td
-                                                                        key={
-                                                                            option.id
-                                                                        }
-                                                                        className="border border-gray-300 px-3 py-2 text-center"
-                                                                    >
-                                                                        <input
-                                                                            type="radio"
-                                                                            name={`statement_${statement.id}`}
-                                                                            value={
-                                                                                option.value
-                                                                            }
-                                                                            checked={
-                                                                                answers[
-                                                                                    q
-                                                                                        .question_uid
-                                                                                ]?.[
-                                                                                    statement
-                                                                                        .id
-                                                                                ] ===
-                                                                                option.value
-                                                                            }
-                                                                            onChange={(
-                                                                                e
-                                                                            ) => {
-                                                                                e.preventDefault();
-                                                                                setAnswer(
-                                                                                    q.question_uid,
-                                                                                    e
-                                                                                        .target
-                                                                                        .value,
-                                                                                    statement.id,
-                                                                                    "likert_scale"
-                                                                                );
-                                                                            }}
-                                                                            className="cursor-pointer h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                                                                        />
-                                                                    </td>
-                                                                )
-                                                            )}
-                                                        </tr>
-                                                    )
-                                                )}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                ) : (
-                                    // Simple Likert Scale
-                                    <div className="flex flex-row gap-x-5 items-center p-2 text-sm">
-                                        {q.answer.structure.map(
-                                            (scale, index) => (
-                                                <div
-                                                    className="flex gap-x-1.5"
-                                                    key={index}
-                                                >
-                                                    <input
-                                                        type="radio"
-                                                        value={scale.value}
-                                                        name={`q_${q.question_uid}`}
-                                                        checked={
-                                                            answers[
-                                                                q.question_uid
-                                                            ]?.value ===
-                                                            scale.value
-                                                        }
-                                                        onChange={(e) => {
-                                                            e.preventDefault();
-                                                            setAnswer(
-                                                                q.question_uid,
-                                                                e.target.value,
-                                                                scale.id,
-                                                                "likert_scale"
-                                                            );
-                                                        }}
-                                                        className="cursor-pointer h-5 w-5 border focus:outline-none border-slate-300 transition-all checked:bg-blue-300 focus:ring-1 rounded-md p-1.5"
-                                                    />
-                                                    <label className="hover:cursor-pointer">
-                                                        {scale.value}
-                                                    </label>
-                                                </div>
-                                            )
-                                        )}
-                                    </div>
-                                )}
-                            </>
-                        )}
-                        {(!q.answer || !q.answer.type) && (
-                            <div className="p-3 bg-red-100 border border-red-300 rounded text-red-700">
-                                <p>
-                                    Error: This question has no answer structure
-                                    defined.
-                                </p>
-                                <p>Question ID: {q.question_uid}</p>
-                                <p>Answer: {JSON.stringify(q.answer)}</p>
-
-                                {/* Fallback input for questions without structure */}
-                                <div className="mt-3">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Your Answer:
-                                    </label>
-                                    <textarea
-                                        className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        rows={3}
-                                        placeholder="Please provide your answer..."
-                                        onChange={(e) => {
-                                            e.preventDefault();
-                                            setAnswer(
-                                                q.question_uid,
-                                                e.target.value,
-                                                null,
-                                                "written"
-                                            );
-                                        }}
-                                    />
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                        question={q}
+                        answers={answers}
+                        setAnswer={setAnswer}
+                        questionIndex={questionIndex}
+                    />
                 ))}
             </div>
         </div>
     );
 
-    const QuestionBlock = ({ question }) => {
-        const questionSection = getQuestionSection(question.id);
-
+    // Show loading state while checking for existing response
+    if (isCheckingExisting) {
         return (
-            <div className="border border-gray-200 rounded-lg p-4 bg-gray-50 mb-4">
-                <div className="flex justify-between items-start mb-3">
-                    <p className="font-medium text-gray-800 flex-1">
-                        {question.question}
-                    </p>
-                    {questionSection && (
-                        <div className="ml-4 px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded-md font-medium">
-                            {questionSection.name === ""
-                                ? `Section ${questionSection.number}`
-                                : questionSection.name}
-                        </div>
-                    )}
+            <Layout>
+                <div className="max-w-4xl mx-auto text-center py-12">
+                    <div className="bg-white rounded-lg shadow-lg p-8">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                        <p className="text-gray-600">Loading survey...</p>
+                    </div>
                 </div>
-
-                {question.answer?.type === "multiple_choice" &&
-                    question.answer?.structure && (
-                        <div className="space-y-2">
-                            {question.answer.structure.map((opt, i) => (
-                                <label
-                                    key={opt.id || opt.value}
-                                    className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded cursor-pointer"
-                                >
-                                    <input
-                                        type="radio"
-                                        name={`q_${question.question_uid}`}
-                                        value={opt.value}
-                                        checked={
-                                            answers[question.question_uid]?.[i]
-                                                ?.checked || false
-                                        }
-                                        onChange={(e) => {
-                                            e.preventDefault();
-                                            setAnswer(
-                                                question.question_uid,
-                                                e.target.value,
-                                                opt.id,
-                                                "multiple_choice"
-                                            );
-                                        }}
-                                        className="w-4 h-4 text-blue-600"
-                                    />
-                                    <span className="text-gray-700">
-                                        {opt.value}
-                                    </span>
-                                </label>
-                            ))}
-                        </div>
-                    )}
-                {question.answer?.type === "check_box" &&
-                    question.answer?.structure && (
-                        <div className="space-y-2">
-                            {question.answer.structure.map((opt, i) => (
-                                <label
-                                    key={opt.id || opt.value}
-                                    className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded cursor-pointer"
-                                >
-                                    <input
-                                        type="checkbox"
-                                        value={opt.value}
-                                        checked={
-                                            answers[question.question_uid]?.[i]
-                                                ?.checked || false
-                                        }
-                                        onChange={(e) => {
-                                            e.preventDefault();
-                                            setAnswer(
-                                                question.question_uid,
-                                                opt.value,
-                                                opt.id,
-                                                "check_box"
-                                            );
-                                        }}
-                                        className="w-4 h-4 text-blue-600"
-                                    />
-                                    <span className="text-gray-700">
-                                        {opt.value}
-                                    </span>
-                                </label>
-                            ))}
-                        </div>
-                    )}
-                {question.answer?.type === "written" && (
-                    <TextAreaWithFocus
-                        question_uid={question.question_uid}
-                        structure_id={question.answer.structure.id}
-                        initialValue={
-                            answers[question.question_uid]?.value || ""
-                        }
-                        onAnswerChange={setAnswer}
-                    />
-                )}
-                {question.answer?.type === "yes_no" && (
-                    <div className="flex gap-6">
-                        {["Yes", "No"].map((opt) => (
-                            <label
-                                key={opt}
-                                className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded cursor-pointer"
-                            >
-                                <input
-                                    type="radio"
-                                    name={`q_${question.id}`}
-                                    value={opt}
-                                    onChange={(e) => {
-                                        e.preventDefault();
-                                        setAnswer(question.id, e.target.value);
-                                    }}
-                                    className="w-4 h-4 text-blue-600"
-                                />
-                                <span className="text-gray-700">{opt}</span>
-                            </label>
-                        ))}
-                    </div>
-                )}
-                {question.answer?.type === "likert_scale" && (
-                    <>
-                        {question.answer.structure &&
-                        question.answer.structure.statements ? (
-                            // Table Likert Scale
-                            <div className="overflow-x-auto">
-                                <table className="w-full border border-gray-300">
-                                    <thead>
-                                        <tr className="bg-gray-50">
-                                            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
-                                                Statement
-                                            </th>
-                                            {question.answer.structure.options.map(
-                                                (option) => (
-                                                    <th
-                                                        key={option.id}
-                                                        className="border border-gray-300 px-3 py-2 text-center text-sm font-medium text-gray-700"
-                                                    >
-                                                        {option.value}
-                                                    </th>
-                                                )
-                                            )}
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {question.answer.structure.statements.map(
-                                            (statement, index) => (
-                                                <tr key={statement.id}>
-                                                    <td className="border border-gray-300 px-3 py-2 text-sm">
-                                                        {index + 1}.{" "}
-                                                        {statement.text}
-                                                    </td>
-                                                    {question.answer.structure.options.map(
-                                                        (option) => (
-                                                            <td
-                                                                key={option.id}
-                                                                className="border border-gray-300 px-3 py-2 text-center"
-                                                            >
-                                                                <input
-                                                                    type="radio"
-                                                                    name={`statement_${statement.id}`}
-                                                                    value={
-                                                                        option.value
-                                                                    }
-                                                                    checked={
-                                                                        answers[
-                                                                            question
-                                                                                .question_uid
-                                                                        ]?.[
-                                                                            statement
-                                                                                .id
-                                                                        ] ===
-                                                                        option.value
-                                                                    }
-                                                                    onChange={(
-                                                                        e
-                                                                    ) => {
-                                                                        e.preventDefault();
-                                                                        setAnswer(
-                                                                            question.question_uid,
-                                                                            e
-                                                                                .target
-                                                                                .value,
-                                                                            statement.id,
-                                                                            "likert_scale"
-                                                                        );
-                                                                    }}
-                                                                    className="cursor-pointer h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                                                                />
-                                                            </td>
-                                                        )
-                                                    )}
-                                                </tr>
-                                            )
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        ) : (
-                            // Simple Likert Scale
-                            <div className="flex flex-row gap-x-5 items-center p-2 text-sm">
-                                {question.answer.structure.map(
-                                    (scale, index) => (
-                                        <div
-                                            className="flex gap-x-1.5"
-                                            key={index}
-                                        >
-                                            <input
-                                                type="radio"
-                                                value={scale.value}
-                                                name={`q_${question.question_uid}`}
-                                                checked={
-                                                    answers[
-                                                        question.question_uid
-                                                    ]?.value === scale.value
-                                                }
-                                                onChange={(e) => {
-                                                    e.preventDefault();
-                                                    setAnswer(
-                                                        question.question_uid,
-                                                        e.target.value,
-                                                        scale.id,
-                                                        "likert_scale"
-                                                    );
-                                                }}
-                                                className="cursor-pointer h-5 w-5 border focus:outline-none border-slate-300 transition-all checked:bg-blue-300 focus:ring-1 rounded-md p-1.5"
-                                            />
-                                            <label className="hover:cursor-pointer">
-                                                {scale.value}
-                                            </label>
-                                        </div>
-                                    )
-                                )}
-                            </div>
-                        )}
-                    </>
-                )}
-
-                {(!question.answer || !question.answer.type) && (
-                    <div className="p-3 bg-red-100 border border-red-300 rounded text-red-700">
-                        <p>
-                            Error: This question has no answer structure
-                            defined.
-                        </p>
-                        <p>Question ID: {question.id}</p>
-                        <p>Answer: {JSON.stringify(question.answer)}</p>
-
-                        <div className="mt-3">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Your Answer:
-                            </label>
-                            <textarea
-                                className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                rows={3}
-                                placeholder="Please provide your answer..."
-                                onChange={(e) => {
-                                    e.preventDefault();
-                                    setAnswer(question.id, e.target.value);
-                                }}
-                            />
-                        </div>
-                    </div>
-                )}
-            </div>
+            </Layout>
         );
-    };
+    }
 
     return (
         <>
+            {/* Resume Dialog */}
+            <ResumeDialog
+                isOpen={showResumeDialog}
+                onResume={loadExistingAnswers}
+                onStartNew={startFresh}
+                lastUpdated={lastUpdated}
+            />
+
             {/* Thank You Modal */}
             {showThankYouModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1031,10 +963,13 @@ export default function Attend({ form }) {
                             ))
                         ) : (
                             <div className="space-y-4">
-                                {questions.map((question) => (
-                                    <QuestionBlock
+                                {questions.map((question, index) => (
+                                    <QuestionComponent
                                         key={question.question_uid}
                                         question={question}
+                                        answers={answers}
+                                        setAnswer={setAnswer}
+                                        questionIndex={index}
                                     />
                                 ))}
                             </div>

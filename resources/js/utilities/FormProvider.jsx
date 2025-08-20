@@ -218,6 +218,9 @@ function FormProvider({
         setFormMode(mode);
     };
 
+    // Initial Form Data (for edit mode validation)
+    const getInitialForm = () => initialForm;
+
     // Form UID
     const getFormUID = () => formUID;
     const setFormUIDContext = (uid) => setFormUID(uid);
@@ -273,6 +276,15 @@ function FormProvider({
             questions_uid: [],
         };
         setSections((sections) => [...sections, section]);
+
+        // Force update the saved status to false to ensure changes are saved
+        setFormSavedStatus(false);
+
+        // Trigger a small delay to ensure the QuestionArranger updates
+        setTimeout(() => {
+            // This will trigger a re-render of components that depend on sections
+            setSections((currentSections) => [...currentSections]);
+        }, 100);
     };
 
     const addSectionToQuestion = (questionId, sectionId) => {
@@ -305,6 +317,9 @@ function FormProvider({
         setSections(updatedSections);
 
         addSectionToQuestion(questionId, sectionId);
+
+        // Force update the saved status to false to ensure changes are saved
+        setFormSavedStatus(false);
     };
 
     const removeSectionFromQuestion = (sectionId) => {
@@ -346,7 +361,7 @@ function FormProvider({
         setFormSavedStatus(false);
 
         // Immediately update localStorage with the new sections
-        /* if (formUID && formUID !== "" && formMode !== "preview") {
+        if (formUID && formUID !== "" && formMode !== "preview") {
             let form = {
                 form_uid: formUID,
                 title: formTitle,
@@ -359,7 +374,13 @@ function FormProvider({
             };
             localStorage.setItem(formUID, JSON.stringify(form));
             setFormState(form);
-        } */
+        }
+
+        // Trigger a small delay to ensure the QuestionArranger updates
+        setTimeout(() => {
+            // This will trigger a re-render of components that depend on sections
+            setSections((currentSections) => [...currentSections]);
+        }, 50);
     };
 
     const checkEmptySections = () => {
@@ -637,6 +658,8 @@ function FormProvider({
                 //Form Mode
                 getFormMode,
                 setFormModeContext,
+                // Initial Form Data (for edit mode validation)
+                getInitialForm,
                 // Published Status
                 _publishedStatus,
                 _setPublishedStatus,

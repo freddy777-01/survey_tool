@@ -1,4 +1,8 @@
-export function ValidatorForm(form) {
+export function ValidatorForm(
+    form,
+    isEditMode = false,
+    originalStartDate = null
+) {
     if (form === null || !form.title || form.title.trim() === "") {
         return { valid: false, message: "Form title is required." };
     }
@@ -26,7 +30,20 @@ export function ValidatorForm(form) {
     if (end <= begin) {
         return { valid: false, message: "End date must be after start date." };
     }
-    if (begin < today) {
+
+    // In edit mode, allow past dates but prevent setting start date before original
+    if (isEditMode && originalStartDate) {
+        const originalStart = new Date(originalStartDate);
+        originalStart.setHours(0, 0, 0, 0);
+
+        if (begin < originalStart) {
+            return {
+                valid: false,
+                message: "Start date cannot be before the original start date.",
+            };
+        }
+    } else if (!isEditMode && begin < today) {
+        // Only check for past dates in create mode
         return { valid: false, message: "Start date cannot be in the past." };
     }
 

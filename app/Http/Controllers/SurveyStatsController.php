@@ -124,33 +124,108 @@ class SurveyStatsController extends Controller
             return response()->json(['message' => 'This survey is not currently active.'], 403);
         }
 
-        $response = \App\Models\Response::create([
-            'form_id' => $form->id,
-            'user_id' => \Illuminate\Support\Facades\Auth::check() ? \Illuminate\Support\Facades\Auth::id() : null, // This will be null for anonymous users
-            'session_id' => $request->session()->getId(),
-            'ip_address' => $request->ip(),
-        ]);
+        // Check for existing response by session_id and form_id
+        $existingResponse = \App\Models\Response::where('form_id', $form->id)
+            ->where('session_id', $request->session()->getId())
+            ->first();
+
+        if ($existingResponse) {
+            // Update existing response (resume)
+            $response = $existingResponse;
+            $response->update([
+                'last_activity' => now(),
+            ]);
+        } else {
+            // Create new response
+            $response = \App\Models\Response::create([
+                'form_id' => $form->id,
+                'user_id' => \Illuminate\Support\Facades\Auth::check() ? \Illuminate\Support\Facades\Auth::id() : null,
+                'session_id' => $request->session()->getId(),
+                'ip_address' => $request->ip(),
+                'is_completed' => false,
+                'last_activity' => now(),
+            ]);
+        }
 
         // Get all questions for this form to map question_uid to question_id
         $questions = Question::where('form_id', $form->id)->get(['id', 'question_uid', 'section_id']);
         $questionMap = $questions->pluck('id', 'question_uid')->toArray();
-
-
 
         foreach ($validated['answers'] as $questionUid => $value) {
             // Map question_uid to question_id
             $questionId = $questionMap[$questionUid] ?? null;
 
             if ($questionId) {
-                \App\Models\ResponseAnswer::create([
-                    'response_id' => $response->id,
-                    'question_id' => $questionId,
-                    'value' => is_array($value) ? $value : (string)$value,
-                ]);
+                // Use updateOrCreate to handle resuming - allows updating existing answers
+                \App\Models\ResponseAnswer::updateOrCreate(
+                    [
+                        'response_id' => $response->id,
+                        'question_id' => $questionId,
+                    ],
+                    [
+                        'value' => is_array($value) ? $value : (string)$value,
+                    ]
+                );
             }
         }
 
+        // Mark response as completed
+        $response->update([
+            'is_completed' => true,
+            'last_activity' => now(),
+        ]);
+
         return response()->json(['message' => 'Response submitted successfully']);
+    }
+
+    public function getExistingResponse(Request $request)
+    {
+        $formUid = $request->query('form_uid');
+        $form = Form::where('form_uid', $formUid)->firstOrFail();
+
+        $existingResponse = \App\Models\Response::where('form_id', $form->id)
+            ->where('session_id', $request->session()->getId())
+            ->with('responseAnswers.question')
+            ->first();
+
+        if ($existingResponse) {
+            $answers = [];
+            foreach ($existingResponse->responseAnswers as $answer) {
+                $answers[$answer->question->question_uid] = $answer->value;
+            }
+
+            return response()->json([
+                'has_existing_response' => true,
+                'answers' => $answers,
+                'response_id' => $existingResponse->id,
+                'last_updated' => $existingResponse->last_activity,
+                'is_completed' => $existingResponse->is_completed
+            ]);
+        }
+
+        return response()->json(['has_existing_response' => false]);
+    }
+
+    public function checkCompletionStatus(Request $request)
+    {
+        $formUid = $request->query('form_uid');
+        $form = Form::where('form_uid', $formUid)->firstOrFail();
+
+        $existingResponse = \App\Models\Response::where('form_id', $form->id)
+            ->where('session_id', $request->session()->getId())
+            ->first();
+
+        if ($existingResponse) {
+            return response()->json([
+                'has_response' => true,
+                'is_completed' => $existingResponse->is_completed
+            ]);
+        }
+
+        return response()->json([
+            'has_response' => false,
+            'is_completed' => false
+        ]);
     }
 
     public function results(Request $request)

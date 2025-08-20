@@ -9,6 +9,8 @@ export default function DatePicker({
     defaultValue,
     onChange,
     min,
+    isEditMode = false,
+    originalStartDate = null,
 }) {
     const dateInputRef = React.useRef(null);
     const [displayValue, setDisplayValue] = React.useState(defaultValue ?? "");
@@ -16,7 +18,12 @@ export default function DatePicker({
     const formatLocalYyyyMmDd = (date) => moment(date).format("YYYY-MM-DD");
 
     const todayMin = React.useMemo(() => moment().format("YYYY-MM-DD"), []);
-    const effectiveMin = min ?? todayMin;
+
+    // In edit mode, use original start date as minimum if provided, otherwise use today
+    const effectiveMin =
+        isEditMode && originalStartDate
+            ? moment(originalStartDate).format("YYYY-MM-DD")
+            : min ?? todayMin;
 
     React.useEffect(() => {
         if (value !== undefined) {
@@ -61,7 +68,17 @@ export default function DatePicker({
     const validateDate = (dateString) => {
         if (!dateString) return true;
         const date = moment(dateString);
-        return date.isValid() && date.isSameOrAfter(moment().startOf('day'));
+
+        if (isEditMode && originalStartDate) {
+            // In edit mode, validate against original start date
+            const originalStart = moment(originalStartDate).startOf("day");
+            return date.isValid() && date.isSameOrAfter(originalStart);
+        } else {
+            // In create mode, validate against today
+            return (
+                date.isValid() && date.isSameOrAfter(moment().startOf("day"))
+            );
+        }
     };
 
     return (
@@ -72,9 +89,9 @@ export default function DatePicker({
                 id={id || ""}
                 placeholder={placeholder}
                 className={`focus:outline-none ring-1 rounded-md p-2 pr-6 w-[7.2rem] h-[1.5rem] ${
-                    displayValue 
-                        ? validateDate(displayValue) 
-                            ? "ring-green-300 focus:ring-green-500" 
+                    displayValue
+                        ? validateDate(displayValue)
+                            ? "ring-green-300 focus:ring-green-500"
                             : "ring-red-300 focus:ring-red-500"
                         : "ring-blue-300 focus:ring-blue-500"
                 }`}

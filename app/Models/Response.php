@@ -11,7 +11,14 @@ class Response extends Model
         'user_id',
         'session_id',
         'ip_address',
+        'is_completed',
+        'last_activity',
     ];
 
     protected $table = 'responses';
+
+    public function responseAnswers()
+    {
+        return $this->hasMany(ResponseAnswer::class);
+    }
 }

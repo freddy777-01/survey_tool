@@ -21,6 +21,12 @@ import {
     FiMove,
 } from "react-icons/fi";
 
+//FIXME:
+/**
+ * Here,On create mode there are issues with questions arranging functionality.
+ * Happens when I click the add question button to add a second question.
+ *
+ */
 function FormContent() {
     const formContext = React.useContext(FormContext);
     const startDate = formContext._beginDate();
@@ -406,6 +412,18 @@ function FormContent() {
                                         formContext.reorderQuestions(newOrder);
                                         toast.success(
                                             "Question order updated successfully!"
+                                        );
+                                    }}
+                                    onAssignQuestionToSection={(
+                                        questionId,
+                                        sectionId
+                                    ) => {
+                                        formContext.addQuestionToSection(
+                                            questionId,
+                                            sectionId
+                                        );
+                                        toast.success(
+                                            "Question assigned to section!"
                                         );
                                     }}
                                 />

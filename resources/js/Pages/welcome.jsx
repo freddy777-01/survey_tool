@@ -26,6 +26,7 @@ import {
     FiList,
     FiGrid,
     FiBarChart2,
+    FiShare2,
 } from "react-icons/fi";
 
 function getComputedState(form) {
@@ -76,6 +77,8 @@ function welcome({
     const [searchTerm, setSearchTerm] = useState(searchQuery);
     const [showModal, setShowModal] = useState(false);
     const [modalMessage, setModalMessage] = useState("");
+    const [modalType, setModalType] = useState("error"); // "error" or "share"
+    const [shareUrl, setShareUrl] = useState("");
     const [isSearching, setIsSearching] = useState(false);
 
     // Debounced search function
@@ -142,28 +145,41 @@ function welcome({
         return { total, active, published };
     }, [forms]);
 
-    const handleAttendClick = (form) => {
+    const handleAttendClick = async (form) => {
         const state = getComputedState(form);
 
         if (state === "active" && form.published) {
-            // Check if user has already responded to this survey (using localStorage)
-            const attendedSurveys = JSON.parse(
-                localStorage.getItem("attendedSurveys") || "[]"
-            );
-            if (attendedSurveys.includes(form.form_uid)) {
-                setModalMessage(
-                    "You have already participated in this survey. You cannot attend it again."
+            try {
+                // Check if user has already completed this survey
+                const response = await fetch(
+                    `/api/surveys/completion-status?form_uid=${form.form_uid}`
                 );
-                setShowModal(true);
-                return;
-            }
+                const data = await response.json();
 
-            // Survey is active and published, proceed to attend
-            router.get(
-                "/survey/attend",
-                { form_uid: form.form_uid },
-                { preserveState: true }
-            );
+                if (data.has_response && data.is_completed) {
+                    setModalMessage(
+                        "You have already completed this survey. Thank you for your participation! You cannot attend it again as your response has been submitted successfully."
+                    );
+                    setModalType("error");
+                    setShowModal(true);
+                    return;
+                }
+
+                // Survey is active and published, and user hasn't completed it, proceed to attend
+                router.get(
+                    "/survey/attend",
+                    { form_uid: form.form_uid },
+                    { preserveState: true }
+                );
+            } catch (error) {
+                console.error("Error checking completion status:", error);
+                // If there's an error checking completion status, allow attendance
+                router.get(
+                    "/survey/attend",
+                    { form_uid: form.form_uid },
+                    { preserveState: true }
+                );
+            }
         } else {
             // Show modal with appropriate message
             let message = "";
@@ -182,8 +198,61 @@ function welcome({
             }
 
             setModalMessage(message);
+            setModalType("error");
             setShowModal(true);
         }
+    };
+
+    const handleShareSurvey = (form) => {
+        const state = getComputedState(form);
+
+        // Check if survey is published and active
+        if (!form.published) {
+            toast.warning(
+                "This survey is not published yet. Please publish it first before sharing."
+            );
+            return;
+        }
+
+        if (state !== "active") {
+            let message = "";
+            if (state === "upcoming") {
+                message =
+                    "This survey is not active yet. It will be available for sharing when it starts.";
+            } else if (state === "expired") {
+                message =
+                    "This survey has expired and is no longer available for sharing.";
+            } else {
+                message = "This survey is not currently available for sharing.";
+            }
+            toast.warning(message);
+            return;
+        }
+
+        // Generate the survey URL
+        const surveyUrl = `${window.location.origin}/survey/attend?form_uid=${form.form_uid}`;
+
+        // Try to copy to clipboard
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard
+                .writeText(surveyUrl)
+                .then(() => {
+                    toast.success("Survey link copied to clipboard!");
+                })
+                .catch(() => {
+                    // Fallback: show the URL in a prompt
+                    showShareModal(surveyUrl);
+                });
+        } else {
+            // Fallback for non-secure contexts
+            showShareModal(surveyUrl);
+        }
+    };
+
+    const showShareModal = (surveyUrl) => {
+        setShareUrl(surveyUrl);
+        setModalType("share");
+        setShowModal(true);
     };
 
     return (
@@ -400,92 +469,124 @@ function welcome({
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="px-3 py-1 text-xs bg-green-600 hover:bg-green-700 text-white border-green-600"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            if (
-                                                                !form.published
-                                                            ) {
-                                                                publishSurvey({
-                                                                    form_uid:
-                                                                        form.form_uid,
-                                                                    begin_date:
-                                                                        form.begin_date,
-                                                                    end_date:
-                                                                        form.end_date,
-                                                                })
-                                                                    .then(
-                                                                        (
-                                                                            response
-                                                                        ) =>
-                                                                            response.json()
+                                                    <div className="flex items-center gap-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleAttendClick(
+                                                                    form
+                                                                );
+                                                            }}
+                                                        >
+                                                            <FiUsers className="w-3 h-3 mr-1" />
+                                                            Attend
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="px-3 py-1 text-xs bg-purple-600 hover:bg-purple-700 text-white border-purple-600"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleShareSurvey(
+                                                                    form
+                                                                );
+                                                            }}
+                                                        >
+                                                            <FiShare2 className="w-3 h-3 mr-1" />
+                                                            Share
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="px-3 py-1 text-xs bg-green-600 hover:bg-green-700 text-white border-green-600"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (
+                                                                    !form.published
+                                                                ) {
+                                                                    publishSurvey(
+                                                                        {
+                                                                            form_uid:
+                                                                                form.form_uid,
+                                                                            begin_date:
+                                                                                form.begin_date,
+                                                                            end_date:
+                                                                                form.end_date,
+                                                                        }
                                                                     )
-                                                                    .then(
-                                                                        (
-                                                                            data
-                                                                        ) => {
-                                                                            if (
-                                                                                data.message
-                                                                            ) {
-                                                                                toast.success(
+                                                                        .then(
+                                                                            (
+                                                                                response
+                                                                            ) =>
+                                                                                response.json()
+                                                                        )
+                                                                        .then(
+                                                                            (
+                                                                                data
+                                                                            ) => {
+                                                                                if (
                                                                                     data.message
+                                                                                ) {
+                                                                                    toast.success(
+                                                                                        data.message
+                                                                                    );
+                                                                                }
+                                                                                router.reload();
+                                                                            }
+                                                                        )
+                                                                        .catch(
+                                                                            (
+                                                                                error
+                                                                            ) => {
+                                                                                toast.error(
+                                                                                    "Failed to publish survey"
                                                                                 );
                                                                             }
-                                                                            router.reload();
-                                                                        }
+                                                                        );
+                                                                } else {
+                                                                    unpublishSurvey(
+                                                                        form.form_uid
                                                                     )
-                                                                    .catch(
-                                                                        (
-                                                                            error
-                                                                        ) => {
-                                                                            toast.error(
-                                                                                "Failed to publish survey"
-                                                                            );
-                                                                        }
-                                                                    );
-                                                            } else {
-                                                                unpublishSurvey(
-                                                                    form.form_uid
-                                                                )
-                                                                    .then(
-                                                                        (
-                                                                            response
-                                                                        ) =>
-                                                                            response.json()
-                                                                    )
-                                                                    .then(
-                                                                        (
-                                                                            data
-                                                                        ) => {
-                                                                            if (
-                                                                                data.message
-                                                                            ) {
-                                                                                toast.success(
+                                                                        .then(
+                                                                            (
+                                                                                response
+                                                                            ) =>
+                                                                                response.json()
+                                                                        )
+                                                                        .then(
+                                                                            (
+                                                                                data
+                                                                            ) => {
+                                                                                if (
                                                                                     data.message
+                                                                                ) {
+                                                                                    toast.success(
+                                                                                        data.message
+                                                                                    );
+                                                                                }
+                                                                                router.reload();
+                                                                            }
+                                                                        )
+                                                                        .catch(
+                                                                            (
+                                                                                error
+                                                                            ) => {
+                                                                                toast.error(
+                                                                                    "Failed to unpublish survey"
                                                                                 );
                                                                             }
-                                                                            router.reload();
-                                                                        }
-                                                                    )
-                                                                    .catch(
-                                                                        (
-                                                                            error
-                                                                        ) => {
-                                                                            toast.error(
-                                                                                "Failed to unpublish survey"
-                                                                            );
-                                                                        }
-                                                                    );
-                                                            }
-                                                        }}
-                                                    >
-                                                        {form.published
-                                                            ? "Unpublish"
-                                                            : "Publish"}
-                                                    </Button>
+                                                                        );
+                                                                }
+                                                            }}
+                                                        >
+                                                            {form.published
+                                                                ? "Unpublish"
+                                                                : "Publish"}
+                                                        </Button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}
@@ -552,34 +653,108 @@ function welcome({
                 </div>
             </div>
 
-            {/* Modal for inactive survey notification */}
+            {/* Modal for notifications and sharing */}
             {showModal && (
                 <div
                     className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
                     onClick={() => setShowModal(false)}
                 >
                     <div
-                        className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-xl"
+                        className={`bg-white rounded-xl p-6 shadow-xl ${
+                            modalType === "share" ? "max-w-lg" : "max-w-md"
+                        } w-full mx-4`}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="bg-orange-100 p-2 rounded-lg">
-                                <FiXCircle className="w-6 h-6 text-orange-600" />
-                            </div>
-                            <h3 className="text-lg font-semibold text-gray-900">
-                                Survey Not Available
-                            </h3>
-                        </div>
-                        <p className="text-gray-600 mb-6">{modalMessage}</p>
-                        <div className="flex justify-end">
-                            <Button
-                                variant="default"
-                                onClick={() => setShowModal(false)}
-                                className="bg-blue-600 hover:bg-blue-700 text-white"
-                            >
-                                Close
-                            </Button>
-                        </div>
+                        {modalType === "share" ? (
+                            // Share modal
+                            <>
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="bg-purple-100 p-2 rounded-lg">
+                                        <FiShare2 className="w-6 h-6 text-purple-600" />
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-gray-900">
+                                        Share Survey
+                                    </h3>
+                                </div>
+                                <p className="text-gray-600 mb-4">
+                                    Share this survey link with your
+                                    participants:
+                                </p>
+                                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
+                                    <input
+                                        type="text"
+                                        value={shareUrl}
+                                        readOnly
+                                        className="w-full bg-transparent border-none outline-none text-sm text-gray-700 font-mono"
+                                    />
+                                </div>
+                                <div className="flex justify-end gap-2">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => {
+                                            if (
+                                                navigator.clipboard &&
+                                                window.isSecureContext
+                                            ) {
+                                                navigator.clipboard
+                                                    .writeText(shareUrl)
+                                                    .then(() => {
+                                                        toast.success(
+                                                            "Link copied to clipboard!"
+                                                        );
+                                                    });
+                                            }
+                                        }}
+                                        className="border-purple-200 text-purple-600 hover:bg-purple-50"
+                                    >
+                                        Copy Link
+                                    </Button>
+                                    <Button
+                                        variant="default"
+                                        onClick={() => setShowModal(false)}
+                                        className="bg-purple-600 hover:bg-purple-700 text-white"
+                                    >
+                                        Close
+                                    </Button>
+                                </div>
+                            </>
+                        ) : (
+                            // Error modal
+                            <>
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div
+                                        className={`p-2 rounded-lg ${
+                                            modalMessage.includes("completed")
+                                                ? "bg-green-100"
+                                                : "bg-orange-100"
+                                        }`}
+                                    >
+                                        {modalMessage.includes("completed") ? (
+                                            <FiCheckCircle className="w-6 h-6 text-green-600" />
+                                        ) : (
+                                            <FiXCircle className="w-6 h-6 text-orange-600" />
+                                        )}
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-gray-900">
+                                        {modalMessage.includes("completed")
+                                            ? "Survey Already Completed"
+                                            : "Survey Not Available"}
+                                    </h3>
+                                </div>
+                                <p className="text-gray-600 mb-6">
+                                    {modalMessage}
+                                </p>
+                                <div className="flex justify-end">
+                                    <Button
+                                        variant="default"
+                                        onClick={() => setShowModal(false)}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                                    >
+                                        Close
+                                    </Button>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             )}

@@ -10,6 +10,7 @@ import TableLikertScale from "./TableLikertScale";
 import { LuPencilLine } from "react-icons/lu";
 import { Button } from "@/Components/ui/button";
 
+//TODO => user can duplicate a question incase wants to use the same answer format
 export default function Question({
     questionId,
     question,

@@ -16,14 +16,19 @@ const QuestionArranger = ({
     onClose,
     onApplyOrder,
     sections = [],
+    onAssignQuestionToSection = null,
 }) => {
     const [orderedQuestions, setOrderedQuestions] = useState([]);
     const [groupBySection, setGroupBySection] = useState(true);
     const [draggedItem, setDraggedItem] = useState(null);
     const [dragOverItem, setDragOverItem] = useState(null);
     const [expandedSections, setExpandedSections] = useState({});
+    const [isUpdating, setIsUpdating] = useState(false);
 
     useEffect(() => {
+        // Show updating state briefly
+        setIsUpdating(true);
+
         // Only initialize if questions exist and are valid
         if (questions && Array.isArray(questions) && questions.length > 0) {
             setOrderedQuestions([...questions]);
@@ -41,6 +46,19 @@ const QuestionArranger = ({
             });
         }
         setExpandedSections(initialExpanded);
+
+        // Debug: Log when sections or questions change
+        console.log(
+            "QuestionArranger: Sections updated:",
+            sections?.length || 0
+        );
+        console.log(
+            "QuestionArranger: Questions updated:",
+            questions?.length || 0
+        );
+
+        // Hide updating state after a brief delay
+        setTimeout(() => setIsUpdating(false), 100);
     }, [questions, sections]);
 
     // Drag and drop handlers
@@ -179,12 +197,12 @@ const QuestionArranger = ({
             }
         });
 
-        // Remove empty sections and "No Section" if it's empty
-        Object.keys(groups).forEach((sectionName) => {
-            if (groups[sectionName].length === 0) {
-                delete groups[sectionName];
-            }
-        });
+        // Only remove "No Section" if it's empty, but keep empty sections for dragging
+        if (groups["No Section"] && groups["No Section"].length === 0) {
+            delete groups["No Section"];
+        }
+
+        // Keep all sections (even empty ones) so users can see them and drag questions into them
 
         return groups;
     }, [groupBySection, orderedQuestions, sections, getSectionName]);
@@ -266,10 +284,14 @@ const QuestionArranger = ({
                         className={`border border-gray-200 rounded-md p-2 cursor-pointer hover:bg-gray-50 transition-colors ${
                             isNoSection
                                 ? "bg-orange-50 border-orange-200"
+                                : questionCount === 0
+                                ? "bg-blue-50 border-blue-200"
                                 : "bg-gray-100"
                         } ${
                             dragOverItem === `section-${sectionUid}`
-                                ? "border-blue-400 bg-blue-50"
+                                ? "border-blue-400 bg-blue-100 ring-2 ring-blue-300"
+                                : dragOverItem === `assigned-${sectionUid}`
+                                ? "border-green-400 bg-green-100 ring-2 ring-green-300"
                                 : ""
                         }`}
                         onClick={() => sectionUid && toggleSection(sectionUid)}
@@ -280,6 +302,27 @@ const QuestionArranger = ({
                         onDrop={(e) => {
                             e.preventDefault();
                             if (sectionUid && draggedItem !== null) {
+                                // Get the dragged question
+                                const draggedQuestion =
+                                    orderedQuestions[draggedItem];
+
+                                // Assign the question to this section
+                                if (
+                                    onAssignQuestionToSection &&
+                                    draggedQuestion
+                                ) {
+                                    onAssignQuestionToSection(
+                                        draggedQuestion.question_uid,
+                                        sectionUid
+                                    );
+                                    // Add visual feedback
+                                    setDragOverItem(`assigned-${sectionUid}`);
+                                    setTimeout(
+                                        () => setDragOverItem(null),
+                                        500
+                                    );
+                                }
+
                                 // Find the index where to insert the question in this section
                                 const sectionQuestions =
                                     orderedQuestions.filter(
@@ -311,7 +354,9 @@ const QuestionArranger = ({
                                 </span>
                                 {sectionUid && !isNoSection && (
                                     <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">
-                                        Drop questions here
+                                        {questionCount === 0
+                                            ? "Empty - Drop questions here"
+                                            : "Drop questions here"}
                                     </span>
                                 )}
                             </div>
@@ -329,11 +374,22 @@ const QuestionArranger = ({
 
                     {isExpanded && (
                         <div className="mt-2 space-y-1 pl-3">
-                            {questions.map((question, index) =>
-                                renderQuestionItem(
-                                    question,
-                                    question.displayIndex
+                            {questions.length > 0 ? (
+                                questions.map((question, index) =>
+                                    renderQuestionItem(
+                                        question,
+                                        question.displayIndex
+                                    )
                                 )
+                            ) : (
+                                <div className="text-center py-4 text-gray-500 text-xs border-2 border-dashed border-gray-200 rounded-md bg-gray-50">
+                                    <div className="flex items-center justify-center gap-2">
+                                        <FiMove className="w-3 h-3" />
+                                        <span>
+                                            Drag questions here to organize
+                                        </span>
+                                    </div>
+                                </div>
                             )}
                         </div>
                     )}
@@ -389,6 +445,11 @@ const QuestionArranger = ({
                     <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                         <FiMove className="w-4 h-4 text-blue-600" />
                         Arrange Questions
+                        {isUpdating && (
+                            <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded animate-pulse">
+                                Updating...
+                            </span>
+                        )}
                     </h3>
                     <p className="text-gray-600 text-xs mt-1">
                         Drag and drop to reorder questions
@@ -405,7 +466,11 @@ const QuestionArranger = ({
             </div>
 
             {/* Content */}
-            <div className="space-y-3 max-h-96 overflow-y-auto">
+            <div
+                className={`space-y-3 max-h-96 overflow-y-auto transition-opacity duration-200 ${
+                    isUpdating ? "opacity-75" : "opacity-100"
+                }`}
+            >
                 <div>
                     {Object.entries(getGroupedQuestions()).map(
                         ([sectionName, questions]) => {

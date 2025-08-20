@@ -161,12 +161,24 @@ export default function ActionBar({ questionId, toast }) {
             return;
         }
 
-        if (begin.isBefore(today)) {
+        // In edit mode, allow past dates but prevent setting start date before original
+        const isEditMode = formContext.getFormMode() === "edit";
+        let originalStartDate = null;
+
+        if (
+            isEditMode &&
+            formContext.getInitialForm &&
+            formContext.getInitialForm()
+        ) {
+            originalStartDate = formContext.getInitialForm().main?.begin_date;
+        }
+
+        if (!isEditMode && begin.isBefore(today)) {
             toast.error("Start date cannot be in the past");
             return;
         }
 
-        const validation = ValidatorForm(form);
+        const validation = ValidatorForm(form, isEditMode, originalStartDate);
         if (!validation.valid) {
             toast.warning(validation.message);
         } else {
@@ -274,7 +286,11 @@ export default function ActionBar({ questionId, toast }) {
                 <Button
                     variant="default"
                     size="sm"
-                    className="p-1 px-3 bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
+                    className={`p-1 px-3 flex items-center gap-2 text-white ${
+                        formContext._publishedStatus()
+                            ? "bg-orange-600 hover:bg-orange-700"
+                            : "bg-green-600 hover:bg-green-700"
+                    }`}
                     disabled={
                         formContext.getFormMode() !== "edit" &&
                         !formContext._formSavedStatus()
@@ -288,82 +304,119 @@ export default function ActionBar({ questionId, toast }) {
                             return;
                         }
 
-                        const beginDate = formContext._beginDate();
-                        const endDate = formContext._endDate();
+                        const isCurrentlyPublished =
+                            formContext._publishedStatus();
 
-                        if (!beginDate || !endDate) {
-                            toast.error(
-                                "Please set start and end dates before publishing"
-                            );
-                            return;
-                        }
-
-                        // For edit mode, get form data from the context instead of localStorage
-                        let form;
-                        if (formContext.getFormMode() === "edit") {
-                            // Get the published status from the FormProvider
-                            form = {
-                                form_uid: formContext.getFormUID(),
-                                published: formContext._publishedStatus()
-                                    ? 1
-                                    : 0,
-                                begin_date: beginDate,
-                                end_date: endDate,
-                            };
-                        } else {
-                            form = JSON.parse(
-                                localStorage.getItem(formContext.getFormUID())
-                            );
-                        }
-
-                        const isRepublish = form.published === 1;
-
-                        if (isRepublish) {
+                        if (isCurrentlyPublished) {
+                            // Handle unpublish
                             const confirmed = confirm(
-                                "This will republish the survey. You must change the timeline. Continue?"
+                                "Are you sure you want to unpublish this survey? This will make it inaccessible to respondents."
                             );
                             if (!confirmed) return;
-                        }
 
-                        try {
-                            const response = await makeApiRequest(
-                                "/api/surveys/publish",
-                                {
-                                    form_uid: formContext.getFormUID(),
-                                    begin_date: beginDate,
-                                    end_date: endDate,
-                                }
-                            );
+                            try {
+                                const response = await makeApiRequest(
+                                    "/api/surveys/unpublish",
+                                    {
+                                        form_uid: formContext.getFormUID(),
+                                    }
+                                );
 
-                            const data = await response.json();
+                                const data = await response.json();
 
-                            if (response.ok) {
-                                toast.success(data.message);
-                                // Update local form state if not in edit mode
-                                if (formContext.getFormMode() !== "edit") {
-                                    form.published = 1;
-                                    form.status = "active";
-                                    form.begin_date = beginDate;
-                                    form.end_date = endDate;
-                                    localStorage.setItem(
-                                        formContext.getFormUID(),
-                                        JSON.stringify(form)
+                                if (response.ok) {
+                                    toast.success(
+                                        data.message ||
+                                            "Survey unpublished successfully"
+                                    );
+                                    formContext._setPublishedStatus(false);
+                                    // Reload the page to reflect the unpublished status
+                                    window.location.reload();
+                                } else {
+                                    toast.error(
+                                        data.error ||
+                                            "Failed to unpublish survey"
                                     );
                                 }
-                                // Reload the page to reflect the published status
-                                window.location.reload();
-                            } else {
+                            } catch (error) {
+                                toast.error("Failed to unpublish survey");
+                            }
+                        } else {
+                            // Handle publish
+                            const beginDate = formContext._beginDate();
+                            const endDate = formContext._endDate();
+
+                            if (!beginDate || !endDate) {
                                 toast.error(
-                                    data.error || "Failed to publish survey"
+                                    "Please set start and end dates before publishing"
+                                );
+                                return;
+                            }
+
+                            // For edit mode, get form data from the context instead of localStorage
+                            let form;
+                            if (formContext.getFormMode() === "edit") {
+                                // Get the published status from the FormProvider
+                                form = {
+                                    form_uid: formContext.getFormUID(),
+                                    published: formContext._publishedStatus()
+                                        ? 1
+                                        : 0,
+                                    begin_date: beginDate,
+                                    end_date: endDate,
+                                };
+                            } else {
+                                form = JSON.parse(
+                                    localStorage.getItem(
+                                        formContext.getFormUID()
+                                    )
                                 );
                             }
-                        } catch (error) {
-                            toast.error("Failed to publish survey");
+
+                            try {
+                                const response = await makeApiRequest(
+                                    "/api/surveys/publish",
+                                    {
+                                        form_uid: formContext.getFormUID(),
+                                        begin_date: beginDate,
+                                        end_date: endDate,
+                                    }
+                                );
+
+                                const data = await response.json();
+
+                                if (response.ok) {
+                                    toast.success(data.message);
+                                    // Update local form state if not in edit mode
+                                    if (formContext.getFormMode() !== "edit") {
+                                        form.published = 1;
+                                        form.status = "active";
+                                        form.begin_date = beginDate;
+                                        form.end_date = endDate;
+                                        localStorage.setItem(
+                                            formContext.getFormUID(),
+                                            JSON.stringify(form)
+                                        );
+                                    }
+                                    // Reload the page to reflect the published status
+                                    window.location.reload();
+                                } else {
+                                    toast.error(
+                                        data.error || "Failed to publish survey"
+                                    );
+                                }
+                            } catch (error) {
+                                toast.error("Failed to publish survey");
+                            }
                         }
                     }}
                 >
                     <MdOutlinePublish />
-                    <span>Publish</span>
+                    <span>
+                        {formContext._publishedStatus()
+                            ? "Unpublish"
+                            : "Publish"}
+                    </span>
                 </Button>
 
                 <Button

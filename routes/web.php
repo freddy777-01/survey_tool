@@ -22,6 +22,8 @@ Route::get('survey/edit', [FormController::class, 'editView']);
 Route::get('/api/surveys/stats', [SurveyStatsController::class, 'stats']);
 Route::get('/api/surveys/results', [SurveyStatsController::class, 'results']);
 Route::post('/api/surveys/submit', [SurveyStatsController::class, 'submit']);
+Route::get('/api/surveys/existing-response', [SurveyStatsController::class, 'getExistingResponse']);
+Route::get('/api/surveys/completion-status', [SurveyStatsController::class, 'checkCompletionStatus']);
 
 // Publish/Unpublish surveys
 Route::post('/api/surveys/publish', [FormController::class, 'publish']);

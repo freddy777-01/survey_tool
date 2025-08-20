@@ -5,8 +5,6 @@ import { RxCross2 } from "react-icons/rx";
 import { Button } from "@/Components/ui/button";
 import moment from "moment";
 
-//FIXME => label editing does not work due to change of questionId
-
 export default function CheckBox({
     questionId,
     choice,

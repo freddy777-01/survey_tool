@@ -15,6 +15,7 @@ import {
     FiBarChart2,
     FiRefreshCw,
     FiDownload,
+    FiShare2,
 } from "react-icons/fi";
 import { toast } from "react-toastify";
 import { makeApiRequest } from "@/utilities/api";
@@ -96,6 +97,57 @@ export default function Board({ form, participants: initialParticipants = 0 }) {
             toast.error("Failed to unpublish survey");
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleShareSurvey = () => {
+        // Check if survey is published
+        if (!form.published) {
+            toast.warning(
+                "This survey is not published yet. Please publish it first before sharing."
+            );
+            return;
+        }
+
+        // Check if survey is active
+        const today = new Date();
+        const begin = form.begin_date ? new Date(form.begin_date) : null;
+        const end = form.end_date ? new Date(form.end_date) : null;
+
+        if (begin && end) {
+            if (today < begin) {
+                toast.warning(
+                    "This survey is not active yet. It will be available for sharing when it starts."
+                );
+                return;
+            }
+            if (today > end) {
+                toast.warning(
+                    "This survey has expired and is no longer available for sharing."
+                );
+                return;
+            }
+        }
+
+        // Generate the survey URL
+        const surveyUrl = `${window.location.origin}/survey/attend?form_uid=${form.form_uid}`;
+
+        // Try to copy to clipboard
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard
+                .writeText(surveyUrl)
+                .then(() => {
+                    toast.success("Survey link copied to clipboard!");
+                })
+                .catch(() => {
+                    // Fallback: show the URL in an alert
+                    alert(
+                        `Share this survey link with others:\n\n${surveyUrl}`
+                    );
+                });
+        } else {
+            // Fallback for non-secure contexts
+            alert(`Share this survey link with others:\n\n${surveyUrl}`);
         }
     };
 
@@ -246,6 +298,13 @@ export default function Board({ form, participants: initialParticipants = 0 }) {
                         >
                             <FiEdit3 className="w-4 h-4 mr-2" />
                             Edit Survey
+                        </Button>
+                        <Button
+                            onClick={handleShareSurvey}
+                            className="p-1 px-2 bg-purple-600 hover:bg-purple-700"
+                        >
+                            <FiShare2 className="w-4 h-4 mr-2" />
+                            Share
                         </Button>
                         {/* {<Button
                             onClick={() =>

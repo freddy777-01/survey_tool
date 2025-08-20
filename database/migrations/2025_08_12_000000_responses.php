@@ -17,6 +17,8 @@ return new class extends Migration
             $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->string('session_id')->nullable();
             $table->string('ip_address', 45)->nullable();
+            $table->boolean('is_completed')->default(false);
+            $table->timestamp('last_activity')->nullable();
             $table->timestamps();
 
             // If user_id is present, keep uniqueness per form per user
@@ -33,5 +35,3 @@ return new class extends Migration
         Schema::dropIfExists('responses');
     }
 };
-
-

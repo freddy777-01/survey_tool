@@ -25,8 +25,6 @@ import {
 import { router } from "@inertiajs/react";
 import moment from "moment";
 
-//TODO => then finish setting the start and end time for the survey.
-//TODO=> complete editing functionality
 function EditContent({ form }) {
     const formContext = React.useContext(FormContext);
     const startDate = formContext._beginDate();
@@ -286,6 +284,11 @@ function EditContent({ form }) {
                                         id="start_date"
                                         value={startDate}
                                         onChange={formContext._setBeginDate}
+                                        isEditMode={true}
+                                        originalStartDate={
+                                            formContext.getInitialForm()?.main
+                                                ?.begin_date
+                                        }
                                     />
                                 </div>
 
@@ -318,12 +321,18 @@ function EditContent({ form }) {
                                             End date must be after start date
                                         </div>
                                     ) : startDate &&
+                                      formContext.getInitialForm()?.main
+                                          ?.begin_date &&
                                       moment(startDate).isBefore(
-                                          moment().startOf("day")
+                                          moment(
+                                              formContext.getInitialForm().main
+                                                  .begin_date
+                                          ).startOf("day")
                                       ) ? (
                                         <div className="flex items-center gap-2 text-red-600 text-sm">
                                             <FiAlertCircle className="w-4 h-4" />
-                                            Start date cannot be in the past
+                                            Start date cannot be before the
+                                            original start date
                                         </div>
                                     ) : (
                                         <div className="flex items-center gap-2 text-green-600 text-sm">
@@ -485,6 +494,18 @@ function EditContent({ form }) {
                                         formContext.reorderQuestions(newOrder);
                                         toast.success(
                                             "Question order updated successfully!"
+                                        );
+                                    }}
+                                    onAssignQuestionToSection={(
+                                        questionId,
+                                        sectionId
+                                    ) => {
+                                        formContext.addQuestionToSection(
+                                            questionId,
+                                            sectionId
+                                        );
+                                        toast.success(
+                                            "Question assigned to section!"
                                         );
                                     }}
                                 />

@@ -24,6 +24,14 @@ import {
 } from "react-icons/fi";
 import { router } from "@inertiajs/react";
 import moment from "moment";
+/**
+ * //TODO => add functionality that user can republish the survey
+ *
+ * This can occur when the same survey is done yearly or monthly, then the user can republish the survey with the same questions and sections or update.
+ * Republishing the survery requires user to provide different timeline..
+ * on clicking the the republish button, the survey will be saved as new survey with new timeline and new questions and sections.
+ * the old survey will remain as it is.
+ */
 
 function EditContent({ form }) {
     const formContext = React.useContext(FormContext);
